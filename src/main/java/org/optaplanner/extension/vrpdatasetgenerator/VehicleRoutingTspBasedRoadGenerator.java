@@ -25,6 +25,14 @@ import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Random;
 
+import com.graphhopper.GHRequest;
+import com.graphhopper.GHResponse;
+import com.graphhopper.GraphHopper;
+import com.graphhopper.GraphHopperAPI;
+import com.graphhopper.reader.OSMReader;
+import com.graphhopper.routing.util.EncodingManager;
+import com.graphhopper.storage.GraphBuilder;
+import com.graphhopper.storage.GraphStorage;
 import org.apache.commons.io.IOUtils;
 import org.optaplanner.examples.common.app.LoggingMain;
 import org.optaplanner.examples.tsp.domain.City;
@@ -45,9 +53,19 @@ public class VehicleRoutingTspBasedRoadGenerator extends LoggingMain {
     protected final TspImporter tspImporter;
     protected final VehicleRoutingDao vehicleRoutingDao;
 
+    private final GraphHopper graphHopper;
+
     public VehicleRoutingTspBasedRoadGenerator() {
         tspImporter = new TspImporter();
         vehicleRoutingDao = new VehicleRoutingDao();
+
+        graphHopper = new GraphHopper().forServer();
+        graphHopper.setInMemory(true);
+        graphHopper.setOSMFile("local/osm/north-america-latest.osm.pbf");
+        graphHopper.setGraphHopperLocation("local/graphhopper");
+        graphHopper.setEncodingManager(new EncodingManager(EncodingManager.CAR));
+        graphHopper.importOrLoad();
+        logger.info("GraphHopper loaded.");
     }
 
     public void generate() {
@@ -89,17 +107,27 @@ public class VehicleRoutingTspBasedRoadGenerator extends LoggingMain {
             }
             vrpWriter.write("EDGE_WEIGHT_SECTION\n");
             DecimalFormat distanceFormat = new DecimalFormat("0.0000");
-            for (City rowCity : cityList) {
-                for (City columnCity : cityList) {
+            for (City fromCity : cityList) {
+                for (City toCity : cityList) {
                     double distance;
-                    if (rowCity == columnCity) {
+                    if (fromCity == toCity) {
                         distance = 0.0;
                     } else {
-                        distance = 1.0; // TODO use GraphHopper
+                        GHRequest request = new GHRequest(fromCity.getLatitude(), fromCity.getLongitude(),
+                                toCity.getLatitude(), toCity.getLongitude())
+                                .setVehicle("car");
+                        GHResponse response = graphHopper.route(request);
+                        if (response.hasErrors()) {
+                            throw new IllegalStateException("GraphHopper gave " + response.getErrors().size()
+                                    + " errors. First error chained.",
+                                    response.getErrors().get(0));
+                        }
+                        distance = response.getDistance();
                     }
                     vrpWriter.write(distanceFormat.format(distance) + " ");
                 }
                 vrpWriter.write("\n");
+                logger.info("All distances calculated for city ({}).", fromCity);
             }
 
             vrpWriter.write("DEMAND_SECTION\n");
