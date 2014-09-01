@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Random;
 
@@ -33,6 +34,10 @@ import org.optaplanner.examples.vehiclerouting.persistence.VehicleRoutingDao;
 
 public class VehicleRoutingTspBasedRoadGenerator extends LoggingMain {
 
+    /**
+     * local/osm/north-america-latest.osm.pbf
+     * @param args never null
+     */
     public static void main(String[] args) {
         new VehicleRoutingTspBasedRoadGenerator().generate();
     }
@@ -83,6 +88,19 @@ public class VehicleRoutingTspBasedRoadGenerator extends LoggingMain {
                 selection = newSelection;
             }
             vrpWriter.write("EDGE_WEIGHT_SECTION\n");
+            DecimalFormat distanceFormat = new DecimalFormat("0.0000");
+            for (City rowCity : cityList) {
+                for (City columnCity : cityList) {
+                    double distance;
+                    if (rowCity == columnCity) {
+                        distance = 0.0;
+                    } else {
+                        distance = 1.0; // TODO use GraphHopper
+                    }
+                    vrpWriter.write(distanceFormat.format(distance) + " ");
+                }
+                vrpWriter.write("\n");
+            }
 
             vrpWriter.write("DEMAND_SECTION\n");
             // maximumDemand is 2 times the averageDemand. And the averageDemand is 2/3th of available capacity
