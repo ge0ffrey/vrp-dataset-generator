@@ -22,6 +22,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -97,14 +98,18 @@ public class VehicleRoutingTspBasedRoadGenerator extends LoggingMain {
             double selectionDecrement = (double) locationListSize / (double) cityList.size();
             double selection = (double) locationListSize;
             int index = 1;
+            List<City> newCityList = new ArrayList<City>(cityList.size());
             for (City city : cityList) {
                 double newSelection = selection - selectionDecrement;
                 if ((int) newSelection < (int) selection) {
-                    vrpWriter.write(index + " " + city.getLatitude() + " " + city.getLongitude() + "\n");
+                    newCityList.add(city);
+                    vrpWriter.write(index + " " + city.getLatitude() + " " + city.getLongitude()
+                            + (city.getName() != null ? " " + city.getName().replaceAll(" ", "_") : "")+ "\n");
                     index++;
                 }
                 selection = newSelection;
             }
+            cityList = newCityList;
             vrpWriter.write("EDGE_WEIGHT_SECTION\n");
             DecimalFormat distanceFormat = new DecimalFormat("0.0000");
             for (City fromCity : cityList) {

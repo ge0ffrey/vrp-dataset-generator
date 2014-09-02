@@ -96,7 +96,8 @@ public class FromCitiesCsvGenerator extends LoggingMain {
                 double newSelection = selection - selectionDecrement;
                 if ((int) newSelection < (int) selection) {
                     newCityList.add(city);
-                    vrpWriter.write(index + " " + city.getLatitude() + " " + city.getLongitude() + "\n");
+                    vrpWriter.write(index + " " + city.getLatitude() + " " + city.getLongitude()
+                            + (city.getName() != null ? " " + city.getName().replaceAll(" ", "_") : "")+ "\n");
                     index++;
                 }
                 selection = newSelection;
@@ -173,7 +174,7 @@ public class FromCitiesCsvGenerator extends LoggingMain {
         } finally {
             IOUtils.closeQuietly(bufferedReader);
         }
-        logger.info("Cities read.");
+        logger.info("Read {} cities.", cityList.size());
         return cityList;
     }
 
