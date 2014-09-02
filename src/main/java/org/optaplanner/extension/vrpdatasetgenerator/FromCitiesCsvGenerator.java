@@ -66,15 +66,17 @@ public class FromCitiesCsvGenerator extends LoggingMain {
 
     public void generate() {
         // Air
+        generateVrp(new File("data/raw/belgium-cities.csv"), 50, 10, 125, false, false);
         generateVrp(new File("data/raw/belgium-cities.csv"), 100, 10, 250, false, false);
         generateVrp(new File("data/raw/belgium-cities.csv"), 500, 20, 250, false, false);
         generateVrp(new File("data/raw/belgium-cities.csv"), 1000, 20, 500, false, false);
         generateVrp(new File("data/raw/belgium-cities.csv"), 2750, 55, 500, false, false);
         // Road
+        generateVrp(new File("data/raw/belgium-cities.csv"), 50, 10, 125, true, false);
         generateVrp(new File("data/raw/belgium-cities.csv"), 100, 10, 250, true, false);
         generateVrp(new File("data/raw/belgium-cities.csv"), 500, 20, 250, true, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), 1000, 20, 500, true, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), 2750, 55, 500, true, false);
+        generateVrp(new File("data/raw/belgium-cities.csv"), 1000, 20, 500, true, false);
+        generateVrp(new File("data/raw/belgium-cities.csv"), 2750, 55, 500, true, false);
     }
 
     public void generateVrp(File cityFile, int locationListSize, int vehicleListSize, int capacity, boolean road, boolean scalable) {
