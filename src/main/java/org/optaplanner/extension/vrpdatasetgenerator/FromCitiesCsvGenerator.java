@@ -66,10 +66,17 @@ public class FromCitiesCsvGenerator extends LoggingMain {
 
     public void generate() {
         generateVrp(new File("data/raw/belgium-cities.csv"), 100, 10, 250);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), 500, 20, 250);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), 1000, 20, 500);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), 2871, 60, 500);
     }
 
     public void generateVrp(File cityFile, int locationListSize, int vehicleListSize, int capacity) {
         List<City> cityList = readCityFile(cityFile);
+        if (locationListSize > cityList.size()) {
+            throw new IllegalArgumentException("The locationListSize (" + locationListSize
+                    + ") is larger than the cityList size (" + cityList.size() + ").");
+        }
         String name = cityFile.getName().replaceAll("\\-cities.csv", "")
                 + "-road-n" + locationListSize + "-k" + vehicleListSize;
         File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(), "import/roaddistance/capacitated/" + name + ".vrp");
@@ -104,7 +111,7 @@ public class FromCitiesCsvGenerator extends LoggingMain {
             }
             cityList = newCityList;
             vrpWriter.write("EDGE_WEIGHT_SECTION\n");
-            DecimalFormat distanceFormat = new DecimalFormat("0.0000");
+            DecimalFormat distanceFormat = new DecimalFormat("0.000");
             for (City fromCity : cityList) {
                 for (City toCity : cityList) {
                     double distance;
@@ -120,7 +127,8 @@ public class FromCitiesCsvGenerator extends LoggingMain {
                                     + " errors. First error chained.",
                                     response.getErrors().get(0));
                         }
-                        distance = response.getDistance();
+                        // Distance should be in km, not meter
+                        distance = response.getDistance() / 1000.0;
                     }
                     vrpWriter.write(distanceFormat.format(distance) + " ");
                 }

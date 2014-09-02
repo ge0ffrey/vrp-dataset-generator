@@ -76,6 +76,11 @@ public class VehicleRoutingTspBasedRoadGenerator extends LoggingMain {
     public void generateVrp(File tspInputFile, int locationListSize, int vehicleListSize, int capacity) {
         TravelingSalesmanTour tour = (TravelingSalesmanTour) tspImporter.readSolution(tspInputFile);
         logger.info("TravelingSalesmanTour read.");
+        List<City> cityList = tour.getCityList();
+        if (locationListSize > cityList.size()) {
+            throw new IllegalArgumentException("The locationListSize (" + locationListSize
+                    + ") is larger than the cityList size (" + cityList.size() + ").");
+        }
         String name = tspInputFile.getName().replaceAll("\\d+\\.tsp", "")
                 + "-road-n" + locationListSize + "-k" + vehicleListSize;
         File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(), "import/roaddistance/capacitated/" + name + ".vrp");
@@ -94,7 +99,6 @@ public class VehicleRoutingTspBasedRoadGenerator extends LoggingMain {
             vrpWriter.write("EDGE_WEIGHT_FORMAT: FULL_MATRIX\n");
             vrpWriter.write("CAPACITY: " + capacity + "\n");
             vrpWriter.write("NODE_COORD_SECTION\n");
-            List<City> cityList = tour.getCityList();
             double selectionDecrement = (double) locationListSize / (double) cityList.size();
             double selection = (double) locationListSize;
             int index = 1;
@@ -111,7 +115,7 @@ public class VehicleRoutingTspBasedRoadGenerator extends LoggingMain {
             }
             cityList = newCityList;
             vrpWriter.write("EDGE_WEIGHT_SECTION\n");
-            DecimalFormat distanceFormat = new DecimalFormat("0.0000");
+            DecimalFormat distanceFormat = new DecimalFormat("0.000");
             for (City fromCity : cityList) {
                 for (City toCity : cityList) {
                     double distance;
@@ -127,7 +131,8 @@ public class VehicleRoutingTspBasedRoadGenerator extends LoggingMain {
                                     + " errors. First error chained.",
                                     response.getErrors().get(0));
                         }
-                        distance = response.getDistance();
+                        // Distance should be in km, not meter
+                        distance = response.getDistance() / 1000.0;
                     }
                     vrpWriter.write(distanceFormat.format(distance) + " ");
                 }
