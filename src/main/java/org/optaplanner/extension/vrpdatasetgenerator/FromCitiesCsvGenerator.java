@@ -91,14 +91,17 @@ public class FromCitiesCsvGenerator extends LoggingMain {
             double selectionDecrement = (double) locationListSize / (double) cityList.size();
             double selection = (double) locationListSize;
             int index = 1;
+            List<City> newCityList = new ArrayList<City>(cityList.size());
             for (City city : cityList) {
                 double newSelection = selection - selectionDecrement;
                 if ((int) newSelection < (int) selection) {
+                    newCityList.add(city);
                     vrpWriter.write(index + " " + city.getLatitude() + " " + city.getLongitude() + "\n");
                     index++;
                 }
                 selection = newSelection;
             }
+            cityList = newCityList;
             vrpWriter.write("EDGE_WEIGHT_SECTION\n");
             DecimalFormat distanceFormat = new DecimalFormat("0.0000");
             for (City fromCity : cityList) {
@@ -163,6 +166,7 @@ public class FromCitiesCsvGenerator extends LoggingMain {
                 city.setLatitude(Double.parseDouble(tokens[2]));
                 city.setLongitude(Double.parseDouble(tokens[3]));
                 city.setName(tokens[4]);
+                cityList.add(city);
             }
         } catch (IOException e) {
             throw new IllegalArgumentException("Could not read the cityFile (" + cityFile + ").", e);
