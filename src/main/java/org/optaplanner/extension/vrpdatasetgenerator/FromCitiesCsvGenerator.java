@@ -72,7 +72,7 @@ public class FromCitiesCsvGenerator extends LoggingMain {
         generateVrp(new File("data/raw/belgium-cities.csv"), 2750, 55, 500, false, false);
         // Road
         generateVrp(new File("data/raw/belgium-cities.csv"), 100, 10, 250, true, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), 500, 20, 250, true, false);
+        generateVrp(new File("data/raw/belgium-cities.csv"), 500, 20, 250, true, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), 1000, 20, 500, true, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), 2750, 55, 500, true, false);
     }
