@@ -16,47 +16,43 @@
 
 package org.optaplanner.extension.vrpdatasetgenerator;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 import com.graphhopper.GHRequest;
 import com.graphhopper.GHResponse;
 import com.graphhopper.GraphHopper;
-import com.graphhopper.GraphHopperAPI;
-import com.graphhopper.reader.OSMReader;
 import com.graphhopper.routing.util.EncodingManager;
-import com.graphhopper.storage.GraphBuilder;
-import com.graphhopper.storage.GraphStorage;
 import org.apache.commons.io.IOUtils;
 import org.optaplanner.examples.common.app.LoggingMain;
 import org.optaplanner.examples.tsp.domain.City;
-import org.optaplanner.examples.tsp.domain.TravelingSalesmanTour;
-import org.optaplanner.examples.tsp.persistence.TspImporter;
 import org.optaplanner.examples.vehiclerouting.persistence.VehicleRoutingDao;
 
-public class VehicleRoutingTspBasedRoadGenerator extends LoggingMain {
+public class FromCitiesCsvGenerator extends LoggingMain {
 
     public static void main(String[] args) {
-        new VehicleRoutingTspBasedRoadGenerator().generate();
+        new FromCitiesCsvGenerator().generate();
     }
 
-    protected final TspImporter tspImporter;
     protected final VehicleRoutingDao vehicleRoutingDao;
 
     private final GraphHopper graphHopper;
 
-    public VehicleRoutingTspBasedRoadGenerator() {
-        tspImporter = new TspImporter();
+    public FromCitiesCsvGenerator() {
         vehicleRoutingDao = new VehicleRoutingDao();
 
         graphHopper = new GraphHopper().forServer();
-        String osmPath = "local/osm/north-america-latest.osm.pbf";
+        String osmPath = "local/osm/belgium-latest.osm.pbf";
         if (!new File(osmPath).exists()) {
             throw new IllegalStateException("The osmPath (" + osmPath + ") does not exist.\n" +
                     "Download the osm file from http://download.geofabrik.de/ first.");
@@ -69,13 +65,12 @@ public class VehicleRoutingTspBasedRoadGenerator extends LoggingMain {
     }
 
     public void generate() {
-        generateVrp(new File(tspImporter.getInputDir(), "usa115475.tsp"), 100, 10, 250);
+        generateVrp(new File("data/raw/belgium-cities.csv"), 100, 10, 250);
     }
 
-    public void generateVrp(File tspInputFile, int locationListSize, int vehicleListSize, int capacity) {
-        TravelingSalesmanTour tour = (TravelingSalesmanTour) tspImporter.readSolution(tspInputFile);
-        logger.info("TravelingSalesmanTour read.");
-        String name = tspInputFile.getName().replaceAll("\\d+\\.tsp", "")
+    public void generateVrp(File cityFile, int locationListSize, int vehicleListSize, int capacity) {
+        List<City> cityList = readCityFile(cityFile);
+        String name = cityFile.getName().replaceAll("\\-cities.csv", "")
                 + "-road-n" + locationListSize + "-k" + vehicleListSize;
         File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(), "import/roaddistance/capacitated/" + name + ".vrp");
         if (!vrpOutputFile.getParentFile().exists()) {
@@ -86,14 +81,13 @@ public class VehicleRoutingTspBasedRoadGenerator extends LoggingMain {
         try {
             vrpWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(vrpOutputFile), "UTF-8"));
             vrpWriter.write("NAME: " + name + "\n");
-            vrpWriter.write("COMMENT: Generated from " + tspInputFile.getName() + ". Road distance calculated with GraphHopper.\n");
+            vrpWriter.write("COMMENT: Generated for OptaPlanner. Road distance calculated with GraphHopper.\n");
             vrpWriter.write("TYPE: CVRP\n");
             vrpWriter.write("DIMENSION: " + locationListSize + "\n");
             vrpWriter.write("EDGE_WEIGHT_TYPE: EXPLICIT\n");
             vrpWriter.write("EDGE_WEIGHT_FORMAT: FULL_MATRIX\n");
             vrpWriter.write("CAPACITY: " + capacity + "\n");
             vrpWriter.write("NODE_COORD_SECTION\n");
-            List<City> cityList = tour.getCityList();
             double selectionDecrement = (double) locationListSize / (double) cityList.size();
             double selection = (double) locationListSize;
             int index = 1;
@@ -143,12 +137,40 @@ public class VehicleRoutingTspBasedRoadGenerator extends LoggingMain {
             vrpWriter.write("-1\n");
             vrpWriter.write("EOF\n");
         } catch (IOException e) {
-            throw new IllegalArgumentException("Could not read the tspInputFile (" + tspInputFile.getName()
+            throw new IllegalArgumentException("Could not read the cityFile (" + cityFile.getName()
                     + ") or write the vrpOutputFile (" + vrpOutputFile.getName() + ").", e);
         } finally {
             IOUtils.closeQuietly(vrpWriter);
         }
         logger.info("Generated: {}", vrpOutputFile);
+    }
+
+    private List<City> readCityFile(File cityFile) {
+        List<City> cityList = new ArrayList<City>(3000);
+        BufferedReader bufferedReader = null;
+        long id = 0L;
+        try {
+            bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(cityFile), "UTF-8"));
+            for (String line = bufferedReader.readLine(); line != null; line = bufferedReader.readLine()) {
+                String[] tokens = line.split(";");
+                if (tokens.length != 5) {
+                    throw new IllegalArgumentException("The line (" + line + ") does not have 5 tokens ("
+                            + tokens.length + ").");
+                }
+                City city = new City();
+                city.setId(id);
+                id++;
+                city.setLatitude(Double.parseDouble(tokens[2]));
+                city.setLongitude(Double.parseDouble(tokens[3]));
+                city.setName(tokens[4]);
+            }
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Could not read the cityFile (" + cityFile + ").", e);
+        } finally {
+            IOUtils.closeQuietly(bufferedReader);
+        }
+        logger.info("Cities read.");
+        return cityList;
     }
 
 }
