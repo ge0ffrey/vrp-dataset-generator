@@ -35,20 +35,20 @@ import com.graphhopper.GraphHopper;
 import com.graphhopper.routing.util.EncodingManager;
 import org.apache.commons.io.IOUtils;
 import org.optaplanner.examples.common.app.LoggingMain;
-import org.optaplanner.examples.tsp.domain.City;
+import org.optaplanner.examples.vehiclerouting.domain.location.AirLocation;
 import org.optaplanner.examples.vehiclerouting.persistence.VehicleRoutingDao;
 
-public class FromCitiesCsvGenerator extends LoggingMain {
+public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
 
     public static void main(String[] args) {
-        new FromCitiesCsvGenerator().generate();
+        new FromBelgiumCitiesCsvGenerator().generate();
     }
 
     protected final VehicleRoutingDao vehicleRoutingDao;
 
     private final GraphHopper graphHopper;
 
-    public FromCitiesCsvGenerator() {
+    public FromBelgiumCitiesCsvGenerator() {
         vehicleRoutingDao = new VehicleRoutingDao();
 
         graphHopper = new GraphHopper().forServer();
@@ -79,14 +79,14 @@ public class FromCitiesCsvGenerator extends LoggingMain {
         generateVrp(new File("data/raw/belgium-cities.csv"), 2750, 55, 500, true, false);
     }
 
-    public void generateVrp(File cityFile, int locationListSize, int vehicleListSize, int capacity, boolean road, boolean scalable) {
-        List<City> cityList = readCityFile(cityFile);
-        if (locationListSize > cityList.size()) {
+    public void generateVrp(File locationFile, int locationListSize, int vehicleListSize, int capacity, boolean road, boolean scalable) {
+        List<AirLocation> locationList = readAirLocationFile(locationFile);
+        if (locationListSize > locationList.size()) {
             throw new IllegalArgumentException("The locationListSize (" + locationListSize
-                    + ") is larger than the cityList size (" + cityList.size() + ").");
+                    + ") is larger than the locationList size (" + locationList.size() + ").");
         }
         String suffix = road ? (scalable ? "-roadhub" : "-road") : "";
-        String name = cityFile.getName().replaceAll("\\-cities.csv", "")
+        String name = locationFile.getName().replaceAll("\\-cities.csv", "")
                 + suffix + "-n" + locationListSize + "-k" + vehicleListSize;
         File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(), "import"
                 + (road ? "/roaddistance" : "")
@@ -110,32 +110,32 @@ public class FromCitiesCsvGenerator extends LoggingMain {
             }
             vrpWriter.write("CAPACITY: " + capacity + "\n");
             vrpWriter.write("NODE_COORD_SECTION\n");
-            double selectionDecrement = (double) locationListSize / (double) cityList.size();
+            double selectionDecrement = (double) locationListSize / (double) locationList.size();
             double selection = (double) locationListSize;
             int index = 1;
-            List<City> newCityList = new ArrayList<City>(cityList.size());
-            for (City city : cityList) {
+            List<AirLocation> newAirLocationList = new ArrayList<AirLocation>(locationList.size());
+            for (AirLocation location : locationList) {
                 double newSelection = selection - selectionDecrement;
                 if ((int) newSelection < (int) selection) {
-                    newCityList.add(city);
-                    vrpWriter.write(index + " " + city.getLatitude() + " " + city.getLongitude()
-                            + (city.getName() != null ? " " + city.getName().replaceAll(" ", "_") : "")+ "\n");
+                    newAirLocationList.add(location);
+                    vrpWriter.write(index + " " + location.getLatitude() + " " + location.getLongitude()
+                            + (location.getName() != null ? " " + location.getName().replaceAll(" ", "_") : "")+ "\n");
                     index++;
                 }
                 selection = newSelection;
             }
-            cityList = newCityList;
+            locationList = newAirLocationList;
             if (road) {
                 vrpWriter.write("EDGE_WEIGHT_SECTION\n");
                 DecimalFormat distanceFormat = new DecimalFormat("0.000");
-                for (City fromCity : cityList) {
-                    for (City toCity : cityList) {
+                for (AirLocation fromAirLocation : locationList) {
+                    for (AirLocation toAirLocation : locationList) {
                         double distance;
-                        if (fromCity == toCity) {
+                        if (fromAirLocation == toAirLocation) {
                             distance = 0.0;
                         } else {
-                            GHRequest request = new GHRequest(fromCity.getLatitude(), fromCity.getLongitude(),
-                                    toCity.getLatitude(), toCity.getLongitude())
+                            GHRequest request = new GHRequest(fromAirLocation.getLatitude(), fromAirLocation.getLongitude(),
+                                    toAirLocation.getLatitude(), toAirLocation.getLongitude())
                                     .setVehicle("car");
                             GHResponse response = graphHopper.route(request);
                             if (response.hasErrors()) {
@@ -147,21 +147,21 @@ public class FromCitiesCsvGenerator extends LoggingMain {
                             // Distance should be in km, not meter
                             distance = response.getDistance() / 1000.0;
                             if (distance == 0.0) {
-                                throw new IllegalArgumentException("The fromCity (" + fromCity
-                                        + ") and toCity (" + toCity + ") are the same.");
+                                throw new IllegalArgumentException("The fromAirLocation (" + fromAirLocation
+                                        + ") and toAirLocation (" + toAirLocation + ") are the same.");
                             }
                         }
                         vrpWriter.write(distanceFormat.format(distance) + " ");
                     }
                     vrpWriter.write("\n");
-                    logger.info("All distances calculated for city ({}).", fromCity);
+                    logger.info("All distances calculated for location ({}).", fromAirLocation);
                 }
             } else {
-                for (City fromCity : cityList) {
-                    for (City toCity : cityList) {
-                        if (fromCity != toCity && fromCity.getDistance(toCity) == 0) {
-                            throw new IllegalArgumentException("The fromCity (" + fromCity
-                                    + ") and toCity (" + toCity + ") are the same.");
+                for (AirLocation fromAirLocation : locationList) {
+                    for (AirLocation toAirLocation : locationList) {
+                        if (fromAirLocation != toAirLocation && fromAirLocation.getDistance(toAirLocation) == 0) {
+                            throw new IllegalArgumentException("The fromAirLocation (" + fromAirLocation
+                                    + ") and toAirLocation (" + toAirLocation + ") are the same.");
                         }
                     }
                 }
@@ -180,7 +180,7 @@ public class FromCitiesCsvGenerator extends LoggingMain {
             vrpWriter.write("-1\n");
             vrpWriter.write("EOF\n");
         } catch (IOException e) {
-            throw new IllegalArgumentException("Could not read the cityFile (" + cityFile.getName()
+            throw new IllegalArgumentException("Could not read the locationFile (" + locationFile.getName()
                     + ") or write the vrpOutputFile (" + vrpOutputFile.getName() + ").", e);
         } finally {
             IOUtils.closeQuietly(vrpWriter);
@@ -188,33 +188,33 @@ public class FromCitiesCsvGenerator extends LoggingMain {
         logger.info("Generated: {}", vrpOutputFile);
     }
 
-    private List<City> readCityFile(File cityFile) {
-        List<City> cityList = new ArrayList<City>(3000);
+    private List<AirLocation> readAirLocationFile(File locationFile) {
+        List<AirLocation> locationList = new ArrayList<AirLocation>(3000);
         BufferedReader bufferedReader = null;
         long id = 0L;
         try {
-            bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(cityFile), "UTF-8"));
+            bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(locationFile), "UTF-8"));
             for (String line = bufferedReader.readLine(); line != null; line = bufferedReader.readLine()) {
                 String[] tokens = line.split(";");
                 if (tokens.length != 5) {
                     throw new IllegalArgumentException("The line (" + line + ") does not have 5 tokens ("
                             + tokens.length + ").");
                 }
-                City city = new City();
-                city.setId(id);
+                AirLocation location = new AirLocation();
+                location.setId(id);
                 id++;
-                city.setLatitude(Double.parseDouble(tokens[2]));
-                city.setLongitude(Double.parseDouble(tokens[3]));
-                city.setName(tokens[4]);
-                cityList.add(city);
+                location.setLatitude(Double.parseDouble(tokens[2]));
+                location.setLongitude(Double.parseDouble(tokens[3]));
+                location.setName(tokens[4]);
+                locationList.add(location);
             }
         } catch (IOException e) {
-            throw new IllegalArgumentException("Could not read the cityFile (" + cityFile + ").", e);
+            throw new IllegalArgumentException("Could not read the locationFile (" + locationFile + ").", e);
         } finally {
             IOUtils.closeQuietly(bufferedReader);
         }
-        logger.info("Read {} cities.", cityList.size());
-        return cityList;
+        logger.info("Read {} cities.", locationList.size());
+        return locationList;
     }
 
 }
