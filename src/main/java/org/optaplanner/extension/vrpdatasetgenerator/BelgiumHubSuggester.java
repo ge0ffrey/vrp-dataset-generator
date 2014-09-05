@@ -26,6 +26,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,6 +37,8 @@ import java.util.Set;
 
 import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Multisets;
 import com.graphhopper.GHRequest;
 import com.graphhopper.GHResponse;
@@ -69,14 +73,14 @@ public class BelgiumHubSuggester extends LoggingMain {
     }
 
     public void suggest() {
-        suggest(new File("data/raw/belgium-cities.csv"), 50);
-//        suggest(new File("data/raw/belgium-cities.csv"), 100);
-//        suggest(new File("data/raw/belgium-cities.csv"), 500);
-//        suggest(new File("data/raw/belgium-cities.csv"), 1000);
-//        suggest(new File("data/raw/belgium-cities.csv"), 2750);
+//        suggest(new File("data/raw/belgium-cities.csv"), 50, new File("data/raw/belgium-hubs.txt"));
+        suggest(new File("data/raw/belgium-cities.csv"), 100, new File("data/raw/belgium-hubs.txt"));
+//        suggest(new File("data/raw/belgium-cities.csv"), 500, new File("data/raw/belgium-hubs.txt"));
+//        suggest(new File("data/raw/belgium-cities.csv"), 1000, new File("data/raw/belgium-hubs.txt"));
+//        suggest(new File("data/raw/belgium-cities.csv"), 2750, new File("data/raw/belgium-hubs.txt"));
     }
 
-    public void suggest(File locationFile, int locationListSize) {
+    public void suggest(File locationFile, int locationListSize, File outputFile) {
         List<AirLocation> locationList = readAirLocationFile(locationFile);
         if (locationListSize > locationList.size()) {
             throw new IllegalArgumentException("The locationListSize (" + locationListSize
@@ -96,6 +100,7 @@ public class BelgiumHubSuggester extends LoggingMain {
         }
         locationList = newAirLocationList;
         Map<Point, Set<LocationPair>> pointToPairSetMap = new LinkedHashMap<Point, Set<LocationPair>>(locationListSize * locationListSize);
+        int rowIndex = 0;
         for (AirLocation fromAirLocation : locationList) {
             for (AirLocation toAirLocation : locationList) {
                 double distance;
@@ -130,7 +135,10 @@ public class BelgiumHubSuggester extends LoggingMain {
                     }
                 }
             }
+            logger.debug("  Finished routes for rowIndex {}/{}", rowIndex, locationList.size());
+            rowIndex++;
         }
+        logger.info("Filtering hubs...");
         Map<Set<LocationPair>, Point> pairSetToPointMap = new LinkedHashMap<Set<LocationPair>, Point>(pointToPairSetMap.size());
         for (Map.Entry<Point, Set<LocationPair>> entry : pointToPairSetMap.entrySet()) {
             Point point = entry.getKey();
@@ -140,15 +148,25 @@ public class BelgiumHubSuggester extends LoggingMain {
             }
         }
 
-        System.out.println("Hub candidates:");
-        int pointIndex = 0;
-        for (Map.Entry<Set<LocationPair>, Point> entry : pairSetToPointMap.entrySet()) {
-            int pointCount = entry.getKey().size();
-            Point point = entry.getValue();
-            if (pointCount > (locationListSize * 2)) {
-                System.out.println("" + pointIndex + "\t" + pointCount + "\t" + point.latitude + "," + point.longitude);
+        logger.info("Writing hubs...");
+        BufferedWriter vrpWriter = null;
+        try {
+            vrpWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8"));
+            vrpWriter.write("HUB_COORD_SECTION\n");
+            int id = 0;
+            for (Map.Entry<Set<LocationPair>, Point> entry : pairSetToPointMap.entrySet()) {
+                int pointCount = entry.getKey().size();
+                Point point = entry.getValue();
+                if (pointCount > (locationListSize * 2)) {
+                    vrpWriter.write("" + id + " " + point.latitude + " " + point.longitude + " " + id + "-" + pointCount + "\n");
+                }
+                id++;
             }
-            pointIndex++;
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Could not read the locationFile (" + locationFile.getName()
+                    + ") or write the vrpOutputFile (" + outputFile.getName() + ").", e);
+        } finally {
+            IOUtils.closeQuietly(vrpWriter);
         }
         // Throw in google docs spreadsheet and use add-on Mapping Sheets to visualize.
     }
@@ -182,7 +200,7 @@ public class BelgiumHubSuggester extends LoggingMain {
         return locationList;
     }
 
-    private class Point {
+    private static class Point {
 
         public final double latitude;
         public final double longitude;
@@ -223,7 +241,7 @@ public class BelgiumHubSuggester extends LoggingMain {
 
     }
 
-    private class LocationPair {
+    private static class LocationPair {
 
         public final AirLocation fromLocation;
         public final AirLocation toLocation;
