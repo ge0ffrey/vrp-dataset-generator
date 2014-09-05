@@ -26,7 +26,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -92,11 +95,12 @@ public class BelgiumHubSuggester extends LoggingMain {
             selection = newSelection;
         }
         locationList = newAirLocationList;
-        Multiset<Point> pointSet = HashMultiset.create();
+        Map<Point, Set<LocationPair>> pointToPairSetMap = new LinkedHashMap<Point, Set<LocationPair>>(locationListSize * locationListSize);
         for (AirLocation fromAirLocation : locationList) {
             for (AirLocation toAirLocation : locationList) {
                 double distance;
                 if (fromAirLocation != toAirLocation) {
+                    LocationPair locationPair = new LocationPair(fromAirLocation, toAirLocation);
                     GHRequest request = new GHRequest(fromAirLocation.getLatitude(), fromAirLocation.getLongitude(),
                             toAirLocation.getLatitude(), toAirLocation.getLongitude())
                             .setVehicle("car");
@@ -117,19 +121,33 @@ public class BelgiumHubSuggester extends LoggingMain {
                     for (int i = 0; i < graphHopperPointList.size(); i++) {
                         Point point = new Point(
                                 graphHopperPointList.getLatitude(i), graphHopperPointList.getLongitude(i));
-                        pointSet.add(point);
+                        Set<LocationPair> pairSet = pointToPairSetMap.get(point);
+                        if (pairSet == null) {
+                            pairSet = new LinkedHashSet<LocationPair>(240);
+                            pointToPairSetMap.put(point, pairSet);
+                        }
+                        pairSet.add(locationPair);
                     }
                 }
             }
         }
+        Map<Set<LocationPair>, Point> pairSetToPointMap = new LinkedHashMap<Set<LocationPair>, Point>(pointToPairSetMap.size());
+        for (Map.Entry<Point, Set<LocationPair>> entry : pointToPairSetMap.entrySet()) {
+            Point point = entry.getKey();
+            Set<LocationPair> pairSet = entry.getValue();
+            if (!pairSetToPointMap.containsKey(pairSet)) {
+                pairSetToPointMap.put(pairSet, point);
+            }
+        }
+
         System.out.println("Hub candidates:");
         int pointIndex = 0;
-        for (Point point : Multisets.copyHighestCountFirst(pointSet).elementSet()) {
-            int pointCount = pointSet.count(point);
-            if (pointCount < (locationListSize * 2)) {
-                break;
+        for (Map.Entry<Set<LocationPair>, Point> entry : pairSetToPointMap.entrySet()) {
+            int pointCount = entry.getKey().size();
+            Point point = entry.getValue();
+            if (pointCount > (locationListSize * 2)) {
+                System.out.println("" + pointIndex + "\t" + pointCount + "\t" + point.latitude + "," + point.longitude);
             }
-            System.out.println("" + pointIndex + "\t" + pointCount + "\t" + point.latitude + "," + point.longitude);
             pointIndex++;
         }
         // Throw in google docs spreadsheet and use add-on Mapping Sheets to visualize.
@@ -200,6 +218,43 @@ public class BelgiumHubSuggester extends LoggingMain {
             result = (int) (temp ^ (temp >>> 32));
             temp = Double.doubleToLongBits(longitude);
             result = 31 * result + (int) (temp ^ (temp >>> 32));
+            return result;
+        }
+
+    }
+
+    private class LocationPair {
+
+        public final AirLocation fromLocation;
+        public final AirLocation toLocation;
+
+        private LocationPair(AirLocation fromLocation, AirLocation toLocation) {
+            this.fromLocation = fromLocation;
+            this.toLocation = toLocation;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            LocationPair that = (LocationPair) o;
+            if (!fromLocation.equals(that.fromLocation)) {
+                return false;
+            }
+            if (!toLocation.equals(that.toLocation)) {
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = fromLocation.hashCode();
+            result = 31 * result + toLocation.hashCode();
             return result;
         }
 
