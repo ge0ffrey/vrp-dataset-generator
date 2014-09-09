@@ -24,29 +24,21 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 
-import com.google.common.collect.ConcurrentHashMultiset;
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multisets;
 import com.graphhopper.GHRequest;
 import com.graphhopper.GHResponse;
 import com.graphhopper.GraphHopper;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.util.PointList;
 import org.apache.commons.io.IOUtils;
-import com.google.common.collect.Multiset;
 import org.optaplanner.examples.common.app.LoggingMain;
 import org.optaplanner.examples.vehiclerouting.domain.location.AirLocation;
 
@@ -99,7 +91,7 @@ public class BelgiumHubSuggester extends LoggingMain {
             selection = newSelection;
         }
         locationList = newAirLocationList;
-        Map<Point, Set<LocationPair>> pointToPairSetMap = new LinkedHashMap<Point, Set<LocationPair>>(locationListSize * locationListSize);
+        Map<Point, List<LocationPair>> pointToPairSetMap = new LinkedHashMap<Point, List<LocationPair>>(locationListSize * locationListSize);
         int rowIndex = 0;
         for (AirLocation fromAirLocation : locationList) {
             for (AirLocation toAirLocation : locationList) {
@@ -126,10 +118,12 @@ public class BelgiumHubSuggester extends LoggingMain {
                     for (int i = 0; i < graphHopperPointList.size(); i++) {
                         Point point = new Point(
                                 graphHopperPointList.getLatitude(i), graphHopperPointList.getLongitude(i));
-                        Set<LocationPair> pairSet = pointToPairSetMap.get(point);
+                        List<LocationPair> pairSet = pointToPairSetMap.get(point);
                         if (pairSet == null) {
-                            pairSet = new LinkedHashSet<LocationPair>(240);
+                            pairSet = new ArrayList<LocationPair>(50);
                             pointToPairSetMap.put(point, pairSet);
+                        } else if (pairSet.contains(locationPair)) {
+                            continue;
                         }
                         pairSet.add(locationPair);
                     }
@@ -138,15 +132,36 @@ public class BelgiumHubSuggester extends LoggingMain {
             logger.debug("  Finished routes for rowIndex {}/{}", rowIndex, locationList.size());
             rowIndex++;
         }
-        logger.info("Filtering hubs...");
-        Map<Set<LocationPair>, Point> pairSetToPointMap = new LinkedHashMap<Set<LocationPair>, Point>(pointToPairSetMap.size());
-        for (Map.Entry<Point, Set<LocationPair>> entry : pointToPairSetMap.entrySet()) {
+        logger.info("Filtering duplicate hubs and hubs below threshold...");
+        int threshold = locationListSize;
+        Map<List<LocationPair>, Point> pairSetToPointMap = new LinkedHashMap<List<LocationPair>, Point>(pointToPairSetMap.size());
+        Map<LocationPair, List<Point>> pairToPointSetMap = new LinkedHashMap<LocationPair, List<Point>>(pointToPairSetMap.size());
+        for (Iterator<Map.Entry<Point, List<LocationPair>>> it = pointToPairSetMap.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<Point, List<LocationPair>> entry = it.next();
             Point point = entry.getKey();
-            Set<LocationPair> pairSet = entry.getValue();
-            if (!pairSetToPointMap.containsKey(pairSet)) {
+            List<LocationPair> pairSet = entry.getValue();
+            if (pairSet.size() >= threshold && !pairSetToPointMap.containsKey(pairSet)) {
                 pairSetToPointMap.put(pairSet, point);
+                for (LocationPair pair : pairSet) {
+                    List<Point> pointSet = pairToPointSetMap.get(pair);
+                    if (pointSet == null) {
+                        pointSet = new ArrayList<Point>(50);
+                        pairToPointSetMap.put(pair, pointSet);
+                    }
+                    pointSet.add(point);
+                }
+            } else {
+                it.remove();
             }
         }
+        pairSetToPointMap = null; // it's keys will only get broken anyway
+        List<Point> sortingPointList = new ArrayList<Point>(pointToPairSetMap.size());
+        for (Map.Entry<Point, List<LocationPair>> entry : pointToPairSetMap.entrySet()) {
+            Point point = entry.getKey();
+            point.pairSet = entry.getValue();
+            sortingPointList.add(point);
+        }
+        pointToPairSetMap = null; // we don't need it any more
 
         logger.info("Writing hubs...");
         BufferedWriter vrpWriter = null;
@@ -154,12 +169,17 @@ public class BelgiumHubSuggester extends LoggingMain {
             vrpWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8"));
             vrpWriter.write("HUB_COORD_SECTION\n");
             int id = 0;
-            for (Map.Entry<Set<LocationPair>, Point> entry : pairSetToPointMap.entrySet()) {
-                int pointCount = entry.getKey().size();
-                Point point = entry.getValue();
-                if (pointCount > (locationListSize * 2)) {
-                    vrpWriter.write("" + id + " " + point.latitude + " " + point.longitude + " " + id + "-" + pointCount + "\n");
+            while (id < 20 && !sortingPointList.isEmpty()) {
+                Collections.sort(sortingPointList); // Take the point with most pairs
+                Point point = sortingPointList.remove(0);
+                for (LocationPair pair : point.pairSet) {
+                    for (Point otherPoint : pairToPointSetMap.get(pair)) {
+                        if (otherPoint != point) {
+                            otherPoint.pairSet.remove(pair);
+                        }
+                    }
                 }
+                vrpWriter.write("" + id + " " + point.latitude + " " + point.longitude + " " + id + "\n");
                 id++;
             }
         } catch (IOException e) {
@@ -200,10 +220,12 @@ public class BelgiumHubSuggester extends LoggingMain {
         return locationList;
     }
 
-    private static class Point {
+    private static class Point implements Comparable<Point> {
 
         public final double latitude;
         public final double longitude;
+
+        public List<LocationPair> pairSet = null;
 
         public Point(double latitude, double longitude) {
             this.latitude = latitude;
@@ -239,6 +261,27 @@ public class BelgiumHubSuggester extends LoggingMain {
             return result;
         }
 
+        @Override
+        public int compareTo(Point other) {
+            int size = pairSet.size();
+            int otherSize = other.pairSet.size();
+            if (size < otherSize) {
+                return 1; // Reverse order
+            } else if (size > otherSize) {
+                return -1;
+            }
+            if (latitude < other.latitude) {
+                return -1;
+            } else if (latitude > other.latitude) {
+                return 1;
+            }
+            if (longitude < other.longitude) {
+                return -1;
+            } else if (longitude > other.longitude) {
+                return 1;
+            }
+            return 0;
+        }
     }
 
     private static class LocationPair {
