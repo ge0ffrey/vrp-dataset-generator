@@ -41,6 +41,7 @@ import com.graphhopper.GraphHopper;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.util.PointList;
 import org.apache.commons.io.IOUtils;
+import org.optaplanner.core.api.score.constraint.primdouble.DoubleConstraintMatch;
 import org.optaplanner.examples.common.app.LoggingMain;
 import org.optaplanner.examples.vehiclerouting.domain.location.AirLocation;
 
@@ -67,14 +68,10 @@ public class BelgiumHubSuggester extends LoggingMain {
     }
 
     public void suggest() {
-        suggest(new File("data/raw/belgium-cities.csv"), 50, new File("data/raw/belgium-hubs.txt"));
-//        suggest(new File("data/raw/belgium-cities.csv"), 100, new File("data/raw/belgium-hubs.txt"));
-//        suggest(new File("data/raw/belgium-cities.csv"), 500, new File("data/raw/belgium-hubs.txt"));
-//        suggest(new File("data/raw/belgium-cities.csv"), 1000, new File("data/raw/belgium-hubs.txt"));
-//        suggest(new File("data/raw/belgium-cities.csv"), 2750, new File("data/raw/belgium-hubs.txt"));
+        suggest(new File("data/raw/belgium-cities.csv"), 200, new File("data/raw/suggested-belgium-hubs.txt"), 30);
     }
 
-    public void suggest(File locationFile, int locationListSize, File outputFile) {
+    public void suggest(File locationFile, int locationListSize, File outputFile, int hubSize) {
         // WARNING: this code is VERY DIRTY.
         // It's JUST good enough to generate the hubs for Belgium once (because we only need to determine them once).
         // Further research to generate good hubs is needed.
@@ -120,9 +117,14 @@ public class BelgiumHubSuggester extends LoggingMain {
                     PointList graphHopperPointList = response.getPoints();
                     PointPart previousFromPointPart = null;
                     PointPart previousToPointPart = null;
+                    double previousLatitude = Double.NaN;
+                    double previousLongitude = Double.NaN;
                     for (int i = 0; i < graphHopperPointList.size(); i++) {
                         double latitude = graphHopperPointList.getLatitude(i);
                         double longitude = graphHopperPointList.getLongitude(i);
+                        if (latitude == previousLatitude && longitude == previousLongitude) {
+                            continue;
+                        }
                         if (calcAirDistance(latitude, longitude,
                                 fromAirLocation.getLatitude(), fromAirLocation.getLongitude()) < airDistanceThreshold) {
                             Point fromPoint = new Point(latitude, longitude);
@@ -174,87 +176,17 @@ public class BelgiumHubSuggester extends LoggingMain {
                                 previousToPointPart = null;
                             }
                         }
+                        previousLatitude = latitude;
+                        previousLongitude = longitude;
                     }
                 }
             }
             logger.debug("  Finished routes for rowIndex {}/{}", rowIndex, locationList.size());
             rowIndex++;
         }
-        List<Point> fromPointList = new ArrayList<Point>(fromPointMap.values());
-//        logger.info("Filtering points below threshold...");
-//        fromPointMap = null;
-//        int THRESHOLD = 10;
-//        for (Iterator<Point> it = fromPointList.iterator(); it.hasNext(); ) {
-//            Point point = it.next();
-//            if (point.pointPartMap.values().size() < THRESHOLD) {
-//                it.remove();
-//                point.removed = true;
-//            }
-//        }
-//        for (Point point : fromPointList) {
-//            for (PointPart pointPart : point.pointPartMap.values()) {
-//                PointPart previousPart = pointPart.previousPart;
-//                while (previousPart != null && previousPart.point.removed) {
-//                    previousPart = previousPart.previousPart;
-//                }
-//                pointPart.previousPart = previousPart;
-//            }
-//        }
-        logger.info("Finding hubs...");
         Set<Point> hubPointList = new LinkedHashSet<Point>(20);
-        while (true) {
-            logger.info("  {} fromPoints left", fromPointList.size());
-            // Make the biggest merger of 2 big streams into 1 stream a hub.
-            int maxCount = -1;
-            Point maxCountPoint = null;
-            for (Point point : fromPointList) {
-                int count = 0;
-                for (PointPart pointPart : point.pointPartMap.values()) {
-                    count += pointPart.count;
-                }
-                if (count > maxCount) {
-                    maxCount = count;
-                    maxCountPoint = point;
-                }
-            }
-            if (maxCountPoint == null) {
-                throw new IllegalStateException("No maxCountPoint (" + maxCountPoint + ") found.");
-            }
-            maxCountPoint.hub = true;
-            fromPointList.remove(maxCountPoint);
-            hubPointList.add(maxCountPoint);
-            // Remove trailing parts
-            for (Iterator<Point> pointIt = fromPointList.iterator(); pointIt.hasNext(); ) {
-                Point point = pointIt.next();
-                for (Iterator<PointPart> partIt = point.pointPartMap.values().iterator(); partIt.hasNext(); ) {
-                    PointPart pointPart = partIt.next();
-                    if (pointPart.comesAfterHub()) {
-                        partIt.remove();
-                    }
-                }
-                if (point.pointPartMap.isEmpty()) {
-                    point.removed = true;
-                    pointIt.remove();
-                }
-            }
-            // Subtract prefix parts
-            for (PointPart pointPart : maxCountPoint.pointPartMap.values()) {
-                PointPart ancestorPart = pointPart.previousPart;
-                while (ancestorPart != null) {
-                    ancestorPart.count -= pointPart.count;
-//                    if (ancestorPart.count < 0) {
-//                        throw new IllegalStateException("Impossible state"); // TODO FIXME Does happen!
-//                    }
-                    if (ancestorPart.count <= 0) {
-                        ancestorPart.point.pointPartMap.remove(ancestorPart.anchor);
-                    }
-                    ancestorPart = ancestorPart.previousPart;
-                }
-            }
-            if (hubPointList.size() > 20) {
-                break;
-            }
-        }
+        extractFromHubs(new ArrayList<Point>(fromPointMap.values()), hubPointList, (hubSize + 1) / 2);
+        extractFromHubs(new ArrayList<Point>(toPointMap.values()), hubPointList, hubSize / 2);
         logger.info("Writing hubs...");
         BufferedWriter vrpWriter = null;
         try {
@@ -277,6 +209,79 @@ public class BelgiumHubSuggester extends LoggingMain {
             IOUtils.closeQuietly(vrpWriter);
         }
         // Throw in google docs spreadsheet and use add-on Mapping Sheets to visualize.
+    }
+
+    private void extractFromHubs(List<Point> pointList, Set<Point> hubPointList, int hubSize) {
+//        logger.info("Filtering points below threshold...");
+//        fromPointMap = null;
+//        int THRESHOLD = 10;
+//        for (Iterator<Point> it = pointList.iterator(); it.hasNext(); ) {
+//            Point point = it.next();
+//            if (point.pointPartMap.values().size() < THRESHOLD) {
+//                it.remove();
+//                point.removed = true;
+//            }
+//        }
+//        for (Point point : pointList) {
+//            for (PointPart pointPart : point.pointPartMap.values()) {
+//                PointPart previousPart = pointPart.previousPart;
+//                while (previousPart != null && previousPart.point.removed) {
+//                    previousPart = previousPart.previousPart;
+//                }
+//                pointPart.previousPart = previousPart;
+//            }
+//        }
+        logger.info("Extracting hubs...");
+        for (int i = 0; i < hubSize; i++) {
+            logger.info("  {} / {} with remaining pointListSize ({})", i, hubSize, pointList.size());
+            // Make the biggest merger of 2 big streams into 1 stream a hub.
+            int maxCount = -1;
+            Point maxCountPoint = null;
+            for (Point point : pointList) {
+                int count = 0;
+                for (PointPart pointPart : point.pointPartMap.values()) {
+                    count += pointPart.count;
+                }
+                if (count > maxCount) {
+                    maxCount = count;
+                    maxCountPoint = point;
+                }
+            }
+            if (maxCountPoint == null) {
+                throw new IllegalStateException("No maxCountPoint (" + maxCountPoint + ") found.");
+            }
+            maxCountPoint.hub = true;
+            pointList.remove(maxCountPoint);
+            hubPointList.add(maxCountPoint);
+            // Remove trailing parts
+            for (Iterator<Point> pointIt = pointList.iterator(); pointIt.hasNext(); ) {
+                Point point = pointIt.next();
+                for (Iterator<PointPart> partIt = point.pointPartMap.values().iterator(); partIt.hasNext(); ) {
+                    PointPart pointPart = partIt.next();
+                    if (pointPart.comesAfterHub()) {
+                        partIt.remove();
+                    }
+                }
+                if (point.pointPartMap.isEmpty()) {
+                    point.removed = true;
+                    pointIt.remove();
+                }
+            }
+            // Subtract prefix parts
+            for (PointPart pointPart : maxCountPoint.pointPartMap.values()) {
+                PointPart ancestorPart = pointPart.previousPart;
+                while (ancestorPart != null) {
+                    ancestorPart.count -= pointPart.count;
+//                    if (ancestorPart.count < 0) {
+//                        throw new IllegalStateException("Impossible state"); // TODO FIXME Does happen! Probably because some paths hit the same point twice at different elevation
+//                    }
+                    if (ancestorPart.count <= 0) {
+                        ancestorPart.point.pointPartMap.remove(ancestorPart.anchor);
+                    }
+                    ancestorPart = ancestorPart.previousPart;
+                }
+            }
+        }
     }
 
     private List<AirLocation> subselectLocationList(double locationListSize, List<AirLocation> locationList) {
