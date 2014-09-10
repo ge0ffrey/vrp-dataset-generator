@@ -26,17 +26,25 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import com.graphhopper.GHRequest;
 import com.graphhopper.GHResponse;
 import com.graphhopper.GraphHopper;
 import com.graphhopper.routing.util.EncodingManager;
+import com.graphhopper.util.PointList;
 import org.apache.commons.io.IOUtils;
 import org.optaplanner.examples.common.app.LoggingMain;
 import org.optaplanner.examples.vehiclerouting.domain.location.AirLocation;
 import org.optaplanner.examples.vehiclerouting.domain.location.Location;
+import org.optaplanner.examples.vehiclerouting.domain.location.RoadLocation;
+import org.optaplanner.examples.vehiclerouting.domain.location.segmented.HubSegmentLocation;
+import org.optaplanner.examples.vehiclerouting.domain.location.segmented.RoadSegmentLocation;
 import org.optaplanner.examples.vehiclerouting.persistence.VehicleRoutingDao;
 
 public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
@@ -67,26 +75,26 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
 
     public void generate() {
 //        // Air
-//        generateVrp(new File("data/raw/belgium-cities.csv"), 50, 10, 125, false, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), 100, 10, 250, false, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), 500, 20, 250, false, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), 1000, 20, 500, false, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), 2750, 55, 500, false, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, false, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, false, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, false, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, false, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, false, false);
 //        // Road
-//        generateVrp(new File("data/raw/belgium-cities.csv"), 50, 10, 125, true, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), 100, 10, 250, true, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), 500, 20, 250, true, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), 1000, 20, 500, true, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), 2750, 55, 500, true, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, true, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, true, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, true, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, true, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, true, false);
         // Segmented road
-        generateVrp(new File("data/raw/belgium-cities.csv"), 50, 10, 125, true, true);
-        generateVrp(new File("data/raw/belgium-cities.csv"), 100, 10, 250, true, true);
-        generateVrp(new File("data/raw/belgium-cities.csv"), 500, 20, 250, true, true);
-        generateVrp(new File("data/raw/belgium-cities.csv"), 1000, 20, 500, true, true);
-        generateVrp(new File("data/raw/belgium-cities.csv"), 2750, 55, 500, true, true);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, true, true);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, true, true);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, true, true);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, true, true);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 2750, 55, 500, true, true);
     }
 
-    public void generateVrp(File locationFile, int locationListSize, int vehicleListSize, int capacity, boolean road, boolean segmented) {
+    public void generateVrp(File locationFile, File hubFile, int locationListSize, int vehicleListSize, int capacity, boolean road, boolean segmented) {
         // WARNING: this code is DIRTY.
         // It's JUST good enough to generate the Belgium datasets.
         String suffix = road ? (segmented ? "-segmentedRoad" : "-road") : "";
@@ -99,12 +107,14 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
             throw new IllegalArgumentException("The vrpOutputFile parent directory (" + vrpOutputFile.getParentFile()
                     + ") does not exist.");
         }
-        List<Location> locationList = selectLocationSubList(locationFile, locationListSize);
+        List<HubSegmentLocation> hubList = readHubList(hubFile, segmented);
+        List<Location> locationList = selectLocationSubList(locationFile, locationListSize, hubList.size(), road, segmented);
         BufferedWriter vrpWriter = null;
         try {
-            vrpWriter = writeHeaders(vrpWriter, locationListSize, capacity, road, name, vrpOutputFile);
+            vrpWriter = writeHeaders(vrpWriter, locationListSize, capacity, road, segmented, name, vrpOutputFile);
+            writeHubCoordSection(vrpWriter, segmented, hubList);
             writeNodeCoordSection(vrpWriter, locationList);
-            writeEdgeWeightSection(vrpWriter, road, locationList);
+            writeEdgeWeightSection(vrpWriter, road, segmented, hubList, locationList);
             writeDemandSection(vrpWriter, locationListSize, vehicleListSize, capacity);
             writeDepotSection(vrpWriter);
         } catch (IOException e) {
@@ -116,15 +126,20 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         logger.info("Generated: {}", vrpOutputFile);
     }
 
-    private BufferedWriter writeHeaders(BufferedWriter vrpWriter, int locationListSize, int capacity, boolean road, String name, File vrpOutputFile) throws IOException {
+    private BufferedWriter writeHeaders(BufferedWriter vrpWriter, int locationListSize, int capacity, boolean road, boolean segmented, String name, File vrpOutputFile) throws IOException {
         vrpWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(vrpOutputFile), "UTF-8"));
         vrpWriter.write("NAME: " + name + "\n");
         vrpWriter.write("COMMENT: Generated for OptaPlanner. Road distance calculated with GraphHopper.\n");
         vrpWriter.write("TYPE: CVRP\n");
         vrpWriter.write("DIMENSION: " + locationListSize + "\n");
         if (road) {
-            vrpWriter.write("EDGE_WEIGHT_TYPE: EXPLICIT\n");
-            vrpWriter.write("EDGE_WEIGHT_FORMAT: FULL_MATRIX\n");
+            if (segmented) {
+                vrpWriter.write("EDGE_WEIGHT_TYPE: SEGMENTED_EXPLICIT\n");
+                vrpWriter.write("EDGE_WEIGHT_FORMAT: HUB_AND_NEARBY_MATRIX\n");
+            } else {
+                vrpWriter.write("EDGE_WEIGHT_TYPE: EXPLICIT\n");
+                vrpWriter.write("EDGE_WEIGHT_FORMAT: FULL_MATRIX\n");
+            }
         } else {
             vrpWriter.write("EDGE_WEIGHT_TYPE: EUC_2D\n");
         }
@@ -132,8 +147,20 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         return vrpWriter;
     }
 
-    private List<Location> selectLocationSubList(File locationFile, double locationListSize) {
-        List<AirLocation> airLocationList = readAirLocationFile(locationFile);
+    private void writeHubCoordSection(BufferedWriter vrpWriter, boolean segmented, List<HubSegmentLocation> hubList) throws IOException {
+        if (!segmented) {
+            return;
+        }
+        vrpWriter.write("HUBS: " + hubList.size() + "\n");
+        vrpWriter.write("HUB_COORD_SECTION\n");
+        for (HubSegmentLocation hub : hubList) {
+            vrpWriter.write(hub.getId() + " " + hub.getLatitude() + " " + hub.getLongitude()
+                    + (hub.getName() != null ? " " + hub.getName().replaceAll(" ", "_") : "") + "\n");
+        }
+    }
+
+    private List<Location> selectLocationSubList(File locationFile, double locationListSize, long startId, boolean road, boolean segmented) {
+        List<AirLocation> airLocationList = readAirLocationFile(locationFile, startId);
         if (locationListSize > airLocationList.size()) {
             throw new IllegalArgumentException("The locationListSize (" + locationListSize
                     + ") is larger than the airLocationList size (" + airLocationList.size() + ").");
@@ -144,7 +171,11 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         for (AirLocation location : airLocationList) {
             double newSelection = selection - selectionDecrement;
             if ((int) newSelection < (int) selection) {
-                newLocationList.add(location);
+                Location newLocation = road ? (segmented ?
+                        new RoadSegmentLocation(location.getId(), location.getLatitude(), location.getLongitude())
+                        : new RoadLocation(location.getId(), location.getLatitude(), location.getLongitude()))
+                        : new AirLocation(location.getId(), location.getLatitude(), location.getLongitude());
+                newLocationList.add(newLocation);
             }
             selection = newSelection;
         }
@@ -153,45 +184,116 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
 
     private void writeNodeCoordSection(BufferedWriter vrpWriter, List<Location> locationList) throws IOException {
         vrpWriter.write("NODE_COORD_SECTION\n");
-        int id = 1;
         for (Location location : locationList) {
-            vrpWriter.write(id + " " + location.getLatitude() + " " + location.getLongitude()
+            vrpWriter.write(location.getId() + " " + location.getLatitude() + " " + location.getLongitude()
                     + (location.getName() != null ? " " + location.getName().replaceAll(" ", "_") : "") + "\n");
-            id++;
         }
     }
 
-    private void writeEdgeWeightSection(BufferedWriter vrpWriter, boolean road, List<Location> locationList) throws IOException {
+    private void writeEdgeWeightSection(BufferedWriter vrpWriter, boolean road, boolean segmented, List<HubSegmentLocation> hubList, List<Location> locationList) throws IOException {
         if (road) {
-            vrpWriter.write("EDGE_WEIGHT_SECTION\n");
-            DecimalFormat distanceFormat = new DecimalFormat("0.000");
-            for (Location fromAirLocation : locationList) {
-                for (Location toAirLocation : locationList) {
-                    double distance;
-                    if (fromAirLocation == toAirLocation) {
-                        distance = 0.0;
-                    } else {
-                        GHRequest request = new GHRequest(fromAirLocation.getLatitude(), fromAirLocation.getLongitude(),
-                                toAirLocation.getLatitude(), toAirLocation.getLongitude())
-                                .setVehicle("car");
-                        GHResponse response = graphHopper.route(request);
-                        if (response.hasErrors()) {
-                            throw new IllegalStateException("GraphHopper gave " + response.getErrors().size()
-                                    + " errors. First error chained.",
-                                    response.getErrors().get(0)
-                            );
+            if (!segmented) {
+                vrpWriter.write("EDGE_WEIGHT_SECTION\n");
+                DecimalFormat distanceFormat = new DecimalFormat("0.000");
+                for (Location fromAirLocation : locationList) {
+                    for (Location toAirLocation : locationList) {
+                        double distance;
+                        if (fromAirLocation == toAirLocation) {
+                            distance = 0.0;
+                        } else {
+                            GHResponse response = fetchGhResponse(fromAirLocation, toAirLocation);
+                            // Distance should be in km, not meter
+                            distance = response.getDistance() / 1000.0;
+                            if (distance == 0.0) {
+                                throw new IllegalArgumentException("The fromAirLocation (" + fromAirLocation
+                                        + ") and toAirLocation (" + toAirLocation + ") are the same.");
+                            }
                         }
+                        vrpWriter.write(distanceFormat.format(distance) + " ");
+                    }
+                    vrpWriter.write("\n");
+                    logger.info("All distances calculated for location ({}).", fromAirLocation);
+                }
+            } else {
+                vrpWriter.write("SEGMENTED_EDGE_WEIGHT_SECTION\n");
+                for (HubSegmentLocation fromHubLocation : hubList) {
+                    Map<HubSegmentLocation, Double> hubTravelDistanceMap = new LinkedHashMap<HubSegmentLocation, Double>(hubList.size());
+                    fromHubLocation.setHubTravelDistanceMap(hubTravelDistanceMap);
+                    for (HubSegmentLocation toHubLocation : hubList) {
+                        if (fromHubLocation == toHubLocation) {
+                            continue;
+                        }
+                        GHResponse response = fetchGhResponse(fromHubLocation, toHubLocation);
                         // Distance should be in km, not meter
-                        distance = response.getDistance() / 1000.0;
+                        double distance = response.getDistance() / 1000.0;
                         if (distance == 0.0) {
-                            throw new IllegalArgumentException("The fromAirLocation (" + fromAirLocation
-                                    + ") and toAirLocation (" + toAirLocation + ") are the same.");
+                            throw new IllegalArgumentException("The fromHubLocation (" + fromHubLocation
+                                    + ") and toHubLocation (" + toHubLocation + ") are the same.");
+                        }
+                        hubTravelDistanceMap.put(toHubLocation, distance);
+                    }
+                    logger.info("All hub distances calculated for hub ({}).", fromHubLocation);
+                }
+                Map<Point, HubSegmentLocation> pointToHubMap = new HashMap<Point, HubSegmentLocation>(hubList.size());
+                for (HubSegmentLocation hub : hubList) {
+                    hub.setNearbyTravelDistanceMap(new LinkedHashMap<RoadSegmentLocation, Double>(100));
+                    pointToHubMap.put(new Point(hub.getLatitude(), hub.getLongitude()), hub);
+                }
+                for (Location fromLocationG : locationList) {
+                    RoadSegmentLocation fromLocation = (RoadSegmentLocation) fromLocationG;
+                    Map<RoadSegmentLocation, Double> fromNearbyTravelDistanceMap = new LinkedHashMap<RoadSegmentLocation, Double>();
+                    fromLocation.setNearbyTravelDistanceMap(fromNearbyTravelDistanceMap);
+                    Map<HubSegmentLocation, Double> fromHubTravelDistanceMap = new LinkedHashMap<HubSegmentLocation, Double>();
+                    fromLocation.setHubTravelDistanceMap(fromHubTravelDistanceMap);
+                    for (Location toLocationG : locationList) {
+                        RoadSegmentLocation toLocation = (RoadSegmentLocation) toLocationG;
+                        if (fromLocation == toLocation) {
+                            continue;
+                        }
+                        GHResponse response = fetchGhResponse(fromLocation, toLocation);
+                        // Distance should be in km, not meter
+                        double distance = response.getDistance() / 1000.0;
+                        if (distance == 0.0) {
+                            throw new IllegalArgumentException("The fromLocation (" + fromLocation
+                                    + ") and toLocation (" + toLocation + ") are the same.");
+                        }
+                        PointList ghPointList = response.getPoints();
+                        HubSegmentLocation firstHub = null;
+                        for (int i = 0; i < ghPointList.size(); i++) {
+                            double latitude = ghPointList.getLatitude(i);
+                            double longitude = ghPointList.getLongitude(i);
+                            HubSegmentLocation hub = pointToHubMap.get(new Point(latitude, longitude));
+                            if (hub != null) {
+                                firstHub = hub;
+                                break;
+                            }
+                        }
+                        HubSegmentLocation lastHub = null;
+                        for (int i = ghPointList.size() - 1; i >= 0; i--) {
+                            double latitude = ghPointList.getLatitude(i);
+                            double longitude = ghPointList.getLongitude(i);
+                            HubSegmentLocation hub = pointToHubMap.get(new Point(latitude, longitude));
+                            if (hub != null) {
+                                lastHub = hub;
+                                break;
+                            }
+                        }
+                        if (firstHub == null && lastHub == null) {
+                            fromNearbyTravelDistanceMap.put(toLocation, distance);
+                        } else {
+                            GHResponse firstResponse = fetchGhResponse(fromLocation, toLocation);
+                            // Distance should be in km, not meter
+                            double firstHubDistance = firstResponse.getDistance() / 1000.0;
+                            fromHubTravelDistanceMap.put(firstHub, firstHubDistance);
+                            GHResponse lastResponse = fetchGhResponse(fromLocation, toLocation);
+                            // Distance should be in km, not meter
+                            double lastHubDistance = lastResponse.getDistance() / 1000.0;
+                            lastHub.getNearbyTravelDistanceMap().put(toLocation, lastHubDistance);
                         }
                     }
-                    vrpWriter.write(distanceFormat.format(distance) + " ");
+                    logger.info("All distances calculated for location ({}).", fromLocation);
                 }
-                vrpWriter.write("\n");
-                logger.info("All distances calculated for location ({}).", fromAirLocation);
+                // TODO
             }
         } else {
             for (Location fromAirLocation : locationList) {
@@ -204,6 +306,20 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
             }
 
         }
+    }
+
+    private GHResponse fetchGhResponse(Location fromLocation, Location toLocation) {
+        GHRequest request = new GHRequest(fromLocation.getLatitude(), fromLocation.getLongitude(),
+                toLocation.getLatitude(), toLocation.getLongitude())
+                .setVehicle("car");
+        GHResponse response = graphHopper.route(request);
+        if (response.hasErrors()) {
+            throw new IllegalStateException("GraphHopper gave " + response.getErrors().size()
+                    + " errors. First error chained.",
+                    response.getErrors().get(0)
+            );
+        }
+        return response;
     }
 
     private void writeDemandSection(BufferedWriter vrpWriter, int locationListSize, int vehicleListSize, int capacity) throws IOException {
@@ -224,10 +340,42 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         vrpWriter.write("EOF\n");
     }
 
-    private List<AirLocation> readAirLocationFile(File locationFile) {
-        List<AirLocation> locationList = new ArrayList<AirLocation>(3000);
+    private List<HubSegmentLocation> readHubList(File hubFile, boolean segmented) {
+        if (!segmented) {
+            return Collections.emptyList();
+        }
+        List<HubSegmentLocation> locationList = new ArrayList<HubSegmentLocation>(3000);
         BufferedReader bufferedReader = null;
         long id = 0L;
+        try {
+            bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(hubFile), "UTF-8"));
+            for (String line = bufferedReader.readLine(); line != null; line = bufferedReader.readLine()) {
+                String[] tokens = line.split(" ");
+                if (tokens.length != 4) {
+                    throw new IllegalArgumentException("The line (" + line + ") does not have 4 tokens ("
+                            + tokens.length + ").");
+                }
+                HubSegmentLocation location = new HubSegmentLocation();
+                location.setId(id);
+                id++;
+                location.setLatitude(Double.parseDouble(tokens[1]));
+                location.setLongitude(Double.parseDouble(tokens[2]));
+                location.setName(tokens[3]);
+                locationList.add(location);
+            }
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Could not read the hubFile (" + hubFile + ").", e);
+        } finally {
+            IOUtils.closeQuietly(bufferedReader);
+        }
+        logger.info("Read {} cities.", locationList.size());
+        return locationList;
+    }
+
+    private List<AirLocation> readAirLocationFile(File locationFile, long startId) {
+        List<AirLocation> locationList = new ArrayList<AirLocation>(3000);
+        BufferedReader bufferedReader = null;
+        long id = startId;
         try {
             bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(locationFile), "UTF-8"));
             for (String line = bufferedReader.readLine(); line != null; line = bufferedReader.readLine()) {
@@ -251,6 +399,52 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         }
         logger.info("Read {} cities.", locationList.size());
         return locationList;
+    }
+
+    private static class Point {
+
+        public final double latitude;
+        public final double longitude;
+
+        public Point(double latitude, double longitude) {
+            this.latitude = latitude;
+            this.longitude = longitude;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            Point point = (Point) o;
+            if (Double.compare(point.latitude, latitude) != 0) {
+                return false;
+            }
+            if (Double.compare(point.longitude, longitude) != 0) {
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result;
+            long temp;
+            temp = Double.doubleToLongBits(latitude);
+            result = (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(longitude);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "" + latitude + "," + longitude;
+        }
+
     }
 
 }

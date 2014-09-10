@@ -413,42 +413,6 @@ public class BelgiumHubSuggester extends LoggingMain {
             }
         }
 
-        public boolean isPossiblyFirst() {
-            if (previousPart == null) {
-                return true;
-            }
-            PointPart ancestorPart = previousPart;
-            // Skip the removed points.
-            while (ancestorPart.point.removed) {
-                if (ancestorPart.previousPart == null) {
-                    return true;
-                }
-                ancestorPart = ancestorPart.previousPart;
-            }
-            if (ancestorPart.point.hub) {
-                return false;
-            }
-            return true; // Maybe possibly first
-        }
-
-        public boolean isDefinitelyFirst() {
-            if (previousPart == null) {
-                return true;
-            }
-            PointPart ancestorPart = previousPart;
-            // Skip the removed points.
-            while (ancestorPart.point.removed) {
-                if (ancestorPart.previousPart == null) {
-                    return true;
-                }
-                ancestorPart = ancestorPart.previousPart;
-            }
-            if (ancestorPart.point.hub) {
-                return false;
-            }
-            return false; // Not definitely first
-        }
-
         @Override
         public String toString() {
             return point + "-" + anchor.getName();
