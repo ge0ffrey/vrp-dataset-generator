@@ -114,14 +114,14 @@ public class BelgiumHubSuggester extends LoggingMain {
                         throw new IllegalArgumentException("The fromAirLocation (" + fromAirLocation
                                 + ") and toAirLocation (" + toAirLocation + ") are the same.");
                     }
-                    PointList graphHopperPointList = response.getPoints();
+                    PointList ghPointList = response.getPoints();
                     PointPart previousFromPointPart = null;
                     PointPart previousToPointPart = null;
                     double previousLatitude = Double.NaN;
                     double previousLongitude = Double.NaN;
-                    for (int i = 0; i < graphHopperPointList.size(); i++) {
-                        double latitude = graphHopperPointList.getLatitude(i);
-                        double longitude = graphHopperPointList.getLongitude(i);
+                    for (int i = 0; i < ghPointList.size(); i++) {
+                        double latitude = ghPointList.getLatitude(i);
+                        double longitude = ghPointList.getLongitude(i);
                         if (latitude == previousLatitude && longitude == previousLongitude) {
                             continue;
                         }
