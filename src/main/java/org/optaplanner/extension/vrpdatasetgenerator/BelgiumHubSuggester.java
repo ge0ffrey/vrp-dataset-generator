@@ -25,14 +25,14 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.Multisets;
 import com.graphhopper.GHRequest;
 import com.graphhopper.GHResponse;
 import com.graphhopper.GraphHopper;
@@ -65,8 +65,8 @@ public class BelgiumHubSuggester extends LoggingMain {
     }
 
     public void suggest() {
-//        suggest(new File("data/raw/belgium-cities.csv"), 50, new File("data/raw/belgium-hubs.txt"));
-        suggest(new File("data/raw/belgium-cities.csv"), 100, new File("data/raw/belgium-hubs.txt"));
+        suggest(new File("data/raw/belgium-cities.csv"), 50, new File("data/raw/belgium-hubs.txt"));
+//        suggest(new File("data/raw/belgium-cities.csv"), 100, new File("data/raw/belgium-hubs.txt"));
 //        suggest(new File("data/raw/belgium-cities.csv"), 500, new File("data/raw/belgium-hubs.txt"));
 //        suggest(new File("data/raw/belgium-cities.csv"), 1000, new File("data/raw/belgium-hubs.txt"));
 //        suggest(new File("data/raw/belgium-cities.csv"), 2750, new File("data/raw/belgium-hubs.txt"));
@@ -91,13 +91,13 @@ public class BelgiumHubSuggester extends LoggingMain {
             selection = newSelection;
         }
         locationList = newAirLocationList;
-        Map<Point, List<LocationPair>> pointToPairSetMap = new LinkedHashMap<Point, List<LocationPair>>(locationListSize * locationListSize);
+        Map<Point, Point> fromPointMap = new LinkedHashMap<Point, Point>(locationListSize * 10);
+        Map<Point, Point> toPointMap = new LinkedHashMap<Point, Point>(locationListSize * 10);
         int rowIndex = 0;
         for (AirLocation fromAirLocation : locationList) {
             for (AirLocation toAirLocation : locationList) {
                 double distance;
                 if (fromAirLocation != toAirLocation) {
-                    LocationPair locationPair = new LocationPair(fromAirLocation, toAirLocation);
                     GHRequest request = new GHRequest(fromAirLocation.getLatitude(), fromAirLocation.getLongitude(),
                             toAirLocation.getLatitude(), toAirLocation.getLongitude())
                             .setVehicle("car");
@@ -115,70 +115,134 @@ public class BelgiumHubSuggester extends LoggingMain {
                                 + ") and toAirLocation (" + toAirLocation + ") are the same.");
                     }
                     PointList graphHopperPointList = response.getPoints();
+                    PointPart previousFromPointPart = null;
+                    PointPart previousToPointPart = null;
                     for (int i = 0; i < graphHopperPointList.size(); i++) {
-                        Point point = new Point(
+                        Point fromPoint = new Point(
                                 graphHopperPointList.getLatitude(i), graphHopperPointList.getLongitude(i));
-                        List<LocationPair> pairSet = pointToPairSetMap.get(point);
-                        if (pairSet == null) {
-                            pairSet = new ArrayList<LocationPair>(50);
-                            pointToPairSetMap.put(point, pairSet);
-                        } else if (pairSet.contains(locationPair)) {
-                            continue;
+                        Point oldFromPoint = fromPointMap.get(fromPoint);
+                        if (oldFromPoint == null) {
+                            // Initialize fromPoint instance
+                            fromPoint.pointPartMap = new LinkedHashMap<AirLocation, PointPart>();
+                            fromPointMap.put(fromPoint, fromPoint);
+                        } else {
+                            // Reuse existing fromPoint instance
+                            fromPoint = oldFromPoint;
                         }
-                        pairSet.add(locationPair);
+                        PointPart fromPointPart = fromPoint.pointPartMap.get(fromAirLocation);
+                        if (fromPointPart == null) {
+                            fromPointPart = new PointPart(fromPoint, fromAirLocation);
+                            fromPoint.pointPartMap.put(fromAirLocation, fromPointPart);
+                            fromPointPart.previousPart = previousFromPointPart;
+                        }
+                        previousFromPointPart = fromPointPart;
+                        Point toPoint = new Point(
+                                graphHopperPointList.getLatitude(i), graphHopperPointList.getLongitude(i));
+                        Point oldToPoint = toPointMap.get(toPoint);
+                        if (oldToPoint == null) {
+                            // Initialize toPoint instance
+                            toPoint.pointPartMap = new LinkedHashMap<AirLocation, PointPart>();
+                            toPointMap.put(toPoint, toPoint);
+                        } else {
+                            // Reuse existing toPoint instance
+                            toPoint = oldToPoint;
+                        }
+                        // Basically do the same as fromPointPart, but while traversing in the other direction
+                        PointPart toPointPart = toPoint.pointPartMap.get(toAirLocation);
+                        boolean newToPointPart = false;
+                        if (toPointPart == null) {
+                            toPointPart = new PointPart(toPoint, toAirLocation);
+                            toPoint.pointPartMap.put(toAirLocation, toPointPart);
+                            newToPointPart = true;
+                        }
+                        if (previousToPointPart != null) {
+                            previousToPointPart.previousPart = toPointPart;
+                        }
+                        if (newToPointPart) {
+                            previousToPointPart = toPointPart;
+                        } else {
+                            previousToPointPart = null;
+                        }
                     }
                 }
             }
             logger.debug("  Finished routes for rowIndex {}/{}", rowIndex, locationList.size());
             rowIndex++;
         }
-        logger.info("Filtering duplicate hubs and hubs below threshold...");
-        int threshold = locationListSize;
-        Map<List<LocationPair>, Point> pairSetToPointMap = new LinkedHashMap<List<LocationPair>, Point>(pointToPairSetMap.size());
-        Map<LocationPair, List<Point>> pairToPointSetMap = new LinkedHashMap<LocationPair, List<Point>>(pointToPairSetMap.size());
-        for (Iterator<Map.Entry<Point, List<LocationPair>>> it = pointToPairSetMap.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<Point, List<LocationPair>> entry = it.next();
-            Point point = entry.getKey();
-            List<LocationPair> pairSet = entry.getValue();
-            if (pairSet.size() >= threshold && !pairSetToPointMap.containsKey(pairSet)) {
-                pairSetToPointMap.put(pairSet, point);
-                for (LocationPair pair : pairSet) {
-                    List<Point> pointSet = pairToPointSetMap.get(pair);
-                    if (pointSet == null) {
-                        pointSet = new ArrayList<Point>(50);
-                        pairToPointSetMap.put(pair, pointSet);
+        logger.info("Filtering points below threshold...");
+        List<Point> hubPointList = new ArrayList<Point>(20);
+        List<Point> fromPointList = new ArrayList<Point>(fromPointMap.values());
+        fromPointMap = null;
+        int THRESHOLD = 10;
+        while (!fromPointList.isEmpty()) {
+            logger.info("  {} fromPoints left", fromPointList.size());
+//            for (Iterator<Point> it = fromPointList.iterator(); it.hasNext(); ) {
+//                Point point = it.next();
+//                if (point.pointPartMap.values().size() < THRESHOLD) {
+//                    it.remove();
+//                    point.removed = true;
+//                }
+//            }
+//            for (Point point : fromPointList) {
+//                for (PointPart pointPart : point.pointPartMap.values()) {
+//                    PointPart previousPart = pointPart.previousPart;
+//                    while (previousPart != null && previousPart.point.removed) {
+//                        previousPart = previousPart.previousPart;
+//                    }
+//                    pointPart.previousPart = previousPart;
+//                }
+//            }
+            // Make the biggest merger of 2 big streams into 1 stream a hub.
+            int maxRestCount = -1;
+            Point maxRestPoint = null;
+            for (Point point : fromPointList) {
+                Multiset<Point> previousPoints = HashMultiset.create();
+                for (PointPart pointPart : point.pointPartMap.values()) {
+                    if (pointPart.previousPart != null) {
+                        previousPoints.add(pointPart.previousPart.point);
                     }
-                    pointSet.add(point);
                 }
-            } else {
-                it.remove();
+                if (!previousPoints.isEmpty()) {
+                    Point majorPreviousPoint = Multisets.copyHighestCountFirst(previousPoints).elementSet().iterator().next();
+                    int majorCount = previousPoints.count(majorPreviousPoint);
+                    int restCount = point.pointPartMap.size() - majorCount;
+                    if (restCount > maxRestCount) {
+                        maxRestCount = restCount;
+                        maxRestPoint = point;
+                    }
+                }
+            }
+            if (maxRestPoint == null) {
+                throw new IllegalStateException("No maxRestPoint (" + maxRestPoint + ") found.");
+            }
+            maxRestPoint.hub = true;
+            fromPointList.remove(maxRestPoint);
+            hubPointList.add(maxRestPoint);
+            // Remove trailing parts
+            for (Iterator<Point> pointIt = fromPointList.iterator(); pointIt.hasNext(); ) {
+                Point point = pointIt.next();
+                for (Iterator<PointPart> partIt = point.pointPartMap.values().iterator(); partIt.hasNext(); ) {
+                    PointPart pointPart = partIt.next();
+                    if (pointPart.comesAfterHub()) {
+                        partIt.remove();
+                    }
+                }
+                if (point.pointPartMap.isEmpty()) {
+                    point.removed = true;
+                    pointIt.remove();
+                }
+            }
+            if (hubPointList.size() > 20) {
+                break;
             }
         }
-        pairSetToPointMap = null; // it's keys will only get broken anyway
-        List<Point> sortingPointList = new ArrayList<Point>(pointToPairSetMap.size());
-        for (Map.Entry<Point, List<LocationPair>> entry : pointToPairSetMap.entrySet()) {
-            Point point = entry.getKey();
-            point.pairSet = entry.getValue();
-            sortingPointList.add(point);
-        }
-        pointToPairSetMap = null; // we don't need it any more
-
         logger.info("Writing hubs...");
         BufferedWriter vrpWriter = null;
         try {
             vrpWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile), "UTF-8"));
             vrpWriter.write("HUB_COORD_SECTION\n");
             int id = 0;
-            while (id < 20 && !sortingPointList.isEmpty()) {
-                Collections.sort(sortingPointList); // Take the point with most pairs
-                Point point = sortingPointList.remove(0);
-                for (LocationPair pair : point.pairSet) {
-                    for (Point otherPoint : pairToPointSetMap.get(pair)) {
-                        if (otherPoint != point) {
-                            otherPoint.pairSet.remove(pair);
-                        }
-                    }
-                }
+            for (Point point : hubPointList) {
                 vrpWriter.write("" + id + " " + point.latitude + " " + point.longitude + " " + id + "\n");
                 id++;
             }
@@ -220,12 +284,15 @@ public class BelgiumHubSuggester extends LoggingMain {
         return locationList;
     }
 
-    private static class Point implements Comparable<Point> {
+    private static class Point {
 
         public final double latitude;
         public final double longitude;
 
-        public List<LocationPair> pairSet = null;
+        public Map<AirLocation, PointPart> pointPartMap;
+
+        public boolean removed = false;
+        public boolean hub = false;
 
         public Point(double latitude, double longitude) {
             this.latitude = latitude;
@@ -262,63 +329,76 @@ public class BelgiumHubSuggester extends LoggingMain {
         }
 
         @Override
-        public int compareTo(Point other) {
-            int size = pairSet.size();
-            int otherSize = other.pairSet.size();
-            if (size < otherSize) {
-                return 1; // Reverse order
-            } else if (size > otherSize) {
-                return -1;
-            }
-            if (latitude < other.latitude) {
-                return -1;
-            } else if (latitude > other.latitude) {
-                return 1;
-            }
-            if (longitude < other.longitude) {
-                return -1;
-            } else if (longitude > other.longitude) {
-                return 1;
-            }
-            return 0;
+        public String toString() {
+            return "R-" + removed + "_H-" + hub;
         }
+
     }
 
-    private static class LocationPair {
+    private static class PointPart {
 
-        public final AirLocation fromLocation;
-        public final AirLocation toLocation;
+        public final Point point;
+        public final AirLocation anchor;
+        public PointPart previousPart;
 
-        private LocationPair(AirLocation fromLocation, AirLocation toLocation) {
-            this.fromLocation = fromLocation;
-            this.toLocation = toLocation;
+        public PointPart(Point point, AirLocation anchor) {
+            this.point = point;
+            this.anchor = anchor;
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
+        public boolean comesAfterHub() {
+            PointPart ancestorPart = previousPart;
+            while (true) {
+                if (ancestorPart == null) {
+                    return false;
+                }
+                if (ancestorPart.point.hub) {
+                    return true;
+                }
+                ancestorPart = ancestorPart.previousPart;
+            }
+        }
+
+        public boolean isPossiblyFirst() {
+            if (previousPart == null) {
                 return true;
             }
-            if (o == null || getClass() != o.getClass()) {
+            PointPart ancestorPart = previousPart;
+            // Skip the removed points.
+            while (ancestorPart.point.removed) {
+                if (ancestorPart.previousPart == null) {
+                    return true;
+                }
+                ancestorPart = ancestorPart.previousPart;
+            }
+            if (ancestorPart.point.hub) {
                 return false;
             }
-            LocationPair that = (LocationPair) o;
-            if (!fromLocation.equals(that.fromLocation)) {
+            return true; // Maybe possibly first
+        }
+
+        public boolean isDefinitelyFirst() {
+            if (previousPart == null) {
+                return true;
+            }
+            PointPart ancestorPart = previousPart;
+            // Skip the removed points.
+            while (ancestorPart.point.removed) {
+                if (ancestorPart.previousPart == null) {
+                    return true;
+                }
+                ancestorPart = ancestorPart.previousPart;
+            }
+            if (ancestorPart.point.hub) {
                 return false;
             }
-            if (!toLocation.equals(that.toLocation)) {
-                return false;
-            }
-            return true;
+            return false; // Not definitely first
         }
 
         @Override
-        public int hashCode() {
-            int result = fromLocation.hashCode();
-            result = 31 * result + toLocation.hashCode();
-            return result;
+        public String toString() {
+            return point + "-" + anchor.getName();
         }
-
     }
 
 }
