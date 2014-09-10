@@ -73,6 +73,9 @@ public class BelgiumHubSuggester extends LoggingMain {
     }
 
     public void suggest(File locationFile, int locationListSize, File outputFile) {
+        // WARNING: this code is VERY DIRTY.
+        // It's JUST good enough to generate the hubs for Belgium once (because we only need to determine them once).
+        // Further research to generate good hubs is needed.
         List<AirLocation> locationList = readAirLocationFile(locationFile);
         if (locationListSize > locationList.size()) {
             throw new IllegalArgumentException("The locationListSize (" + locationListSize

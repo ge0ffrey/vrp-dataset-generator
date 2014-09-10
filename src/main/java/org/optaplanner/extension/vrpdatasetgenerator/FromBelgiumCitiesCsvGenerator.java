@@ -80,6 +80,8 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
     }
 
     public void generateVrp(File locationFile, int locationListSize, int vehicleListSize, int capacity, boolean road, boolean scalable) {
+        // WARNING: this code is DIRTY.
+        // It's JUST good enough to generate the Belgium datasets.
         List<AirLocation> locationList = readAirLocationFile(locationFile);
         if (locationListSize > locationList.size()) {
             throw new IllegalArgumentException("The locationListSize (" + locationListSize
