@@ -27,8 +27,10 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
@@ -81,19 +83,7 @@ public class BelgiumHubSuggester extends LoggingMain {
             throw new IllegalArgumentException("The locationListSize (" + locationListSize
                     + ") is larger than the locationList size (" + locationList.size() + ").");
         }
-        double selectionDecrement = (double) locationListSize / (double) locationList.size();
-        double selection = (double) locationListSize;
-        int index = 1;
-        List<AirLocation> newAirLocationList = new ArrayList<AirLocation>(locationList.size());
-        for (AirLocation location : locationList) {
-            double newSelection = selection - selectionDecrement;
-            if ((int) newSelection < (int) selection) {
-                newAirLocationList.add(location);
-                index++;
-            }
-            selection = newSelection;
-        }
-        locationList = newAirLocationList;
+        locationList = subselectLocationList(locationListSize, locationList);
         Map<Point, Point> fromPointMap = new LinkedHashMap<Point, Point>(locationListSize * 10);
         Map<Point, Point> toPointMap = new LinkedHashMap<Point, Point>(locationListSize * 10);
         int rowIndex = 0;
@@ -211,8 +201,8 @@ public class BelgiumHubSuggester extends LoggingMain {
 //            }
 //        }
         logger.info("Finding hubs...");
-        List<Point> hubPointList = new ArrayList<Point>(20);
-        while (!fromPointList.isEmpty()) {
+        Set<Point> hubPointList = new LinkedHashSet<Point>(20);
+        while (true) {
             logger.info("  {} fromPoints left", fromPointList.size());
             // Make the biggest merger of 2 big streams into 1 stream a hub.
             int maxCount = -1;
@@ -247,6 +237,20 @@ public class BelgiumHubSuggester extends LoggingMain {
                     pointIt.remove();
                 }
             }
+            // Subtract prefix parts
+            for (PointPart pointPart : maxCountPoint.pointPartMap.values()) {
+                PointPart ancestorPart = pointPart.previousPart;
+                while (ancestorPart != null) {
+                    ancestorPart.count -= pointPart.count;
+//                    if (ancestorPart.count < 0) {
+//                        throw new IllegalStateException("Impossible state"); // TODO FIXME Does happen!
+//                    }
+                    if (ancestorPart.count <= 0) {
+                        ancestorPart.point.pointPartMap.remove(ancestorPart.anchor);
+                    }
+                    ancestorPart = ancestorPart.previousPart;
+                }
+            }
             if (hubPointList.size() > 20) {
                 break;
             }
@@ -273,6 +277,23 @@ public class BelgiumHubSuggester extends LoggingMain {
             IOUtils.closeQuietly(vrpWriter);
         }
         // Throw in google docs spreadsheet and use add-on Mapping Sheets to visualize.
+    }
+
+    private List<AirLocation> subselectLocationList(double locationListSize, List<AirLocation> locationList) {
+        double selectionDecrement = locationListSize / (double) locationList.size();
+        double selection = locationListSize;
+        int index = 1;
+        List<AirLocation> newAirLocationList = new ArrayList<AirLocation>(locationList.size());
+        for (AirLocation location : locationList) {
+            double newSelection = selection - selectionDecrement;
+            if ((int) newSelection < (int) selection) {
+                newAirLocationList.add(location);
+                index++;
+            }
+            selection = newSelection;
+        }
+        locationList = newAirLocationList;
+        return locationList;
     }
 
     private List<AirLocation> readAirLocationFile(File locationFile) {
@@ -357,7 +378,7 @@ public class BelgiumHubSuggester extends LoggingMain {
 
         @Override
         public String toString() {
-            return "R-" + removed + "_H-" + hub;
+            return "" + latitude + "," + longitude;
         }
 
     }
@@ -367,7 +388,7 @@ public class BelgiumHubSuggester extends LoggingMain {
         public final Point point;
         public final AirLocation anchor;
         public PointPart previousPart;
-        public int count;
+        public int count = 0;
 
         public PointPart(Point point, AirLocation anchor) {
             this.point = point;

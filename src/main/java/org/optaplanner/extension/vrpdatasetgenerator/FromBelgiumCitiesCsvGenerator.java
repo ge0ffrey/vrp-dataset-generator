@@ -112,21 +112,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
             }
             vrpWriter.write("CAPACITY: " + capacity + "\n");
             vrpWriter.write("NODE_COORD_SECTION\n");
-            double selectionDecrement = (double) locationListSize / (double) locationList.size();
-            double selection = (double) locationListSize;
-            int index = 1;
-            List<AirLocation> newAirLocationList = new ArrayList<AirLocation>(locationList.size());
-            for (AirLocation location : locationList) {
-                double newSelection = selection - selectionDecrement;
-                if ((int) newSelection < (int) selection) {
-                    newAirLocationList.add(location);
-                    vrpWriter.write(index + " " + location.getLatitude() + " " + location.getLongitude()
-                            + (location.getName() != null ? " " + location.getName().replaceAll(" ", "_") : "")+ "\n");
-                    index++;
-                }
-                selection = newSelection;
-            }
-            locationList = newAirLocationList;
+            locationList = subselectLocationList(locationListSize, locationList, vrpWriter);
             if (road) {
                 vrpWriter.write("EDGE_WEIGHT_SECTION\n");
                 DecimalFormat distanceFormat = new DecimalFormat("0.000");
@@ -188,6 +174,25 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
             IOUtils.closeQuietly(vrpWriter);
         }
         logger.info("Generated: {}", vrpOutputFile);
+    }
+
+    private List<AirLocation> subselectLocationList(double locationListSize, List<AirLocation> locationList, BufferedWriter vrpWriter) throws IOException {
+        double selectionDecrement = locationListSize / (double) locationList.size();
+        double selection = locationListSize;
+        int index = 1;
+        List<AirLocation> newAirLocationList = new ArrayList<AirLocation>(locationList.size());
+        for (AirLocation location : locationList) {
+            double newSelection = selection - selectionDecrement;
+            if ((int) newSelection < (int) selection) {
+                newAirLocationList.add(location);
+                vrpWriter.write(index + " " + location.getLatitude() + " " + location.getLongitude()
+                        + (location.getName() != null ? " " + location.getName().replaceAll(" ", "_") : "")+ "\n");
+                index++;
+            }
+            selection = newSelection;
+        }
+        locationList = newAirLocationList;
+        return locationList;
     }
 
     private List<AirLocation> readAirLocationFile(File locationFile) {
