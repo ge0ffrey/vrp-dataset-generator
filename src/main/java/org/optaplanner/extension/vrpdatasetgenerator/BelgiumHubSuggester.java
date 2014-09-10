@@ -94,6 +94,16 @@ public class BelgiumHubSuggester extends LoggingMain {
         Map<Point, Point> fromPointMap = new LinkedHashMap<Point, Point>(locationListSize * 10);
         Map<Point, Point> toPointMap = new LinkedHashMap<Point, Point>(locationListSize * 10);
         int rowIndex = 0;
+        double maxAirDistance = 0.0;
+        for (AirLocation fromAirLocation : locationList) {
+            for (AirLocation toAirLocation : locationList) {
+                double airDistance = fromAirLocation.getAirDistanceDouble(toAirLocation);
+                if (airDistance > maxAirDistance) {
+                    maxAirDistance = airDistance;
+                }
+            }
+        }
+        double airDistanceThreshold = maxAirDistance / 10.0;
         for (AirLocation fromAirLocation : locationList) {
             for (AirLocation toAirLocation : locationList) {
                 double distance;
@@ -118,50 +128,58 @@ public class BelgiumHubSuggester extends LoggingMain {
                     PointPart previousFromPointPart = null;
                     PointPart previousToPointPart = null;
                     for (int i = 0; i < graphHopperPointList.size(); i++) {
-                        Point fromPoint = new Point(
-                                graphHopperPointList.getLatitude(i), graphHopperPointList.getLongitude(i));
-                        Point oldFromPoint = fromPointMap.get(fromPoint);
-                        if (oldFromPoint == null) {
-                            // Initialize fromPoint instance
-                            fromPoint.pointPartMap = new LinkedHashMap<AirLocation, PointPart>();
-                            fromPointMap.put(fromPoint, fromPoint);
-                        } else {
-                            // Reuse existing fromPoint instance
-                            fromPoint = oldFromPoint;
+                        double latitude = graphHopperPointList.getLatitude(i);
+                        double longitude = graphHopperPointList.getLongitude(i);
+                        if (calcAirDistance(latitude, longitude,
+                                fromAirLocation.getLatitude(), fromAirLocation.getLongitude()) < airDistanceThreshold) {
+                            Point fromPoint = new Point(latitude, longitude);
+                            Point oldFromPoint = fromPointMap.get(fromPoint);
+                            if (oldFromPoint == null) {
+                                // Initialize fromPoint instance
+                                fromPoint.pointPartMap = new LinkedHashMap<AirLocation, PointPart>();
+                                fromPointMap.put(fromPoint, fromPoint);
+                            } else {
+                                // Reuse existing fromPoint instance
+                                fromPoint = oldFromPoint;
+                            }
+                            PointPart fromPointPart = fromPoint.pointPartMap.get(fromAirLocation);
+                            if (fromPointPart == null) {
+                                fromPointPart = new PointPart(fromPoint, fromAirLocation);
+                                fromPoint.pointPartMap.put(fromAirLocation, fromPointPart);
+                                fromPointPart.previousPart = previousFromPointPart;
+                            }
+                            fromPointPart.count++;
+                            previousFromPointPart = fromPointPart;
                         }
-                        PointPart fromPointPart = fromPoint.pointPartMap.get(fromAirLocation);
-                        if (fromPointPart == null) {
-                            fromPointPart = new PointPart(fromPoint, fromAirLocation);
-                            fromPoint.pointPartMap.put(fromAirLocation, fromPointPart);
-                            fromPointPart.previousPart = previousFromPointPart;
-                        }
-                        previousFromPointPart = fromPointPart;
-                        Point toPoint = new Point(
-                                graphHopperPointList.getLatitude(i), graphHopperPointList.getLongitude(i));
-                        Point oldToPoint = toPointMap.get(toPoint);
-                        if (oldToPoint == null) {
-                            // Initialize toPoint instance
-                            toPoint.pointPartMap = new LinkedHashMap<AirLocation, PointPart>();
-                            toPointMap.put(toPoint, toPoint);
-                        } else {
-                            // Reuse existing toPoint instance
-                            toPoint = oldToPoint;
-                        }
-                        // Basically do the same as fromPointPart, but while traversing in the other direction
-                        PointPart toPointPart = toPoint.pointPartMap.get(toAirLocation);
-                        boolean newToPointPart = false;
-                        if (toPointPart == null) {
-                            toPointPart = new PointPart(toPoint, toAirLocation);
-                            toPoint.pointPartMap.put(toAirLocation, toPointPart);
-                            newToPointPart = true;
-                        }
-                        if (previousToPointPart != null) {
-                            previousToPointPart.previousPart = toPointPart;
-                        }
-                        if (newToPointPart) {
-                            previousToPointPart = toPointPart;
-                        } else {
-                            previousToPointPart = null;
+                        if (calcAirDistance(latitude, longitude,
+                                toAirLocation.getLatitude(), toAirLocation.getLongitude()) < airDistanceThreshold) {
+                            Point toPoint = new Point(latitude, longitude);
+                            Point oldToPoint = toPointMap.get(toPoint);
+                            if (oldToPoint == null) {
+                                // Initialize toPoint instance
+                                toPoint.pointPartMap = new LinkedHashMap<AirLocation, PointPart>();
+                                toPointMap.put(toPoint, toPoint);
+                            } else {
+                                // Reuse existing toPoint instance
+                                toPoint = oldToPoint;
+                            }
+                            // Basically do the same as fromPointPart, but while traversing in the other direction
+                            PointPart toPointPart = toPoint.pointPartMap.get(toAirLocation);
+                            boolean newToPointPart = false;
+                            if (toPointPart == null) {
+                                toPointPart = new PointPart(toPoint, toAirLocation);
+                                toPoint.pointPartMap.put(toAirLocation, toPointPart);
+                                newToPointPart = true;
+                            }
+                            if (previousToPointPart != null) {
+                                previousToPointPart.previousPart = toPointPart;
+                            }
+                            toPointPart.count++;
+                            if (newToPointPart) {
+                                previousToPointPart = toPointPart;
+                            } else {
+                                previousToPointPart = null;
+                            }
                         }
                     }
                 }
@@ -169,55 +187,49 @@ public class BelgiumHubSuggester extends LoggingMain {
             logger.debug("  Finished routes for rowIndex {}/{}", rowIndex, locationList.size());
             rowIndex++;
         }
-        logger.info("Filtering points below threshold...");
-        List<Point> hubPointList = new ArrayList<Point>(20);
         List<Point> fromPointList = new ArrayList<Point>(fromPointMap.values());
-        fromPointMap = null;
-        int THRESHOLD = 10;
+//        logger.info("Filtering points below threshold...");
+//        fromPointMap = null;
+//        int THRESHOLD = 10;
+//        for (Iterator<Point> it = fromPointList.iterator(); it.hasNext(); ) {
+//            Point point = it.next();
+//            if (point.pointPartMap.values().size() < THRESHOLD) {
+//                it.remove();
+//                point.removed = true;
+//            }
+//        }
+//        for (Point point : fromPointList) {
+//            for (PointPart pointPart : point.pointPartMap.values()) {
+//                PointPart previousPart = pointPart.previousPart;
+//                while (previousPart != null && previousPart.point.removed) {
+//                    previousPart = previousPart.previousPart;
+//                }
+//                pointPart.previousPart = previousPart;
+//            }
+//        }
+        logger.info("Finding hubs...");
+        List<Point> hubPointList = new ArrayList<Point>(20);
         while (!fromPointList.isEmpty()) {
             logger.info("  {} fromPoints left", fromPointList.size());
-//            for (Iterator<Point> it = fromPointList.iterator(); it.hasNext(); ) {
-//                Point point = it.next();
-//                if (point.pointPartMap.values().size() < THRESHOLD) {
-//                    it.remove();
-//                    point.removed = true;
-//                }
-//            }
-//            for (Point point : fromPointList) {
-//                for (PointPart pointPart : point.pointPartMap.values()) {
-//                    PointPart previousPart = pointPart.previousPart;
-//                    while (previousPart != null && previousPart.point.removed) {
-//                        previousPart = previousPart.previousPart;
-//                    }
-//                    pointPart.previousPart = previousPart;
-//                }
-//            }
             // Make the biggest merger of 2 big streams into 1 stream a hub.
-            int maxRestCount = -1;
-            Point maxRestPoint = null;
+            int maxCount = -1;
+            Point maxCountPoint = null;
             for (Point point : fromPointList) {
-                Multiset<Point> previousPoints = HashMultiset.create();
+                int count = 0;
                 for (PointPart pointPart : point.pointPartMap.values()) {
-                    if (pointPart.previousPart != null) {
-                        previousPoints.add(pointPart.previousPart.point);
-                    }
+                    count += pointPart.count;
                 }
-                if (!previousPoints.isEmpty()) {
-                    Point majorPreviousPoint = Multisets.copyHighestCountFirst(previousPoints).elementSet().iterator().next();
-                    int majorCount = previousPoints.count(majorPreviousPoint);
-                    int restCount = point.pointPartMap.size() - majorCount;
-                    if (restCount > maxRestCount) {
-                        maxRestCount = restCount;
-                        maxRestPoint = point;
-                    }
+                if (count > maxCount) {
+                    maxCount = count;
+                    maxCountPoint = point;
                 }
             }
-            if (maxRestPoint == null) {
-                throw new IllegalStateException("No maxRestPoint (" + maxRestPoint + ") found.");
+            if (maxCountPoint == null) {
+                throw new IllegalStateException("No maxCountPoint (" + maxCountPoint + ") found.");
             }
-            maxRestPoint.hub = true;
-            fromPointList.remove(maxRestPoint);
-            hubPointList.add(maxRestPoint);
+            maxCountPoint.hub = true;
+            fromPointList.remove(maxCountPoint);
+            hubPointList.add(maxCountPoint);
             // Remove trailing parts
             for (Iterator<Point> pointIt = fromPointList.iterator(); pointIt.hasNext(); ) {
                 Point point = pointIt.next();
@@ -244,6 +256,11 @@ public class BelgiumHubSuggester extends LoggingMain {
             int id = 0;
             for (Point point : hubPointList) {
                 vrpWriter.write("" + id + " " + point.latitude + " " + point.longitude + " " + id + "\n");
+                id++;
+            }
+            vrpWriter.write("\n\nGOOGLE MAPS\n");
+            for (Point point : hubPointList) {
+                vrpWriter.write("" + id + "\t0\t" + point.latitude + "," + point.longitude + "\n");
                 id++;
             }
         } catch (IOException e) {
@@ -282,6 +299,13 @@ public class BelgiumHubSuggester extends LoggingMain {
         }
         logger.info("Read {} cities.", locationList.size());
         return locationList;
+    }
+
+    public static double calcAirDistance(double lat1, double long1, double lat2, double long2) {
+        double latitudeDifference = lat2 - lat1;
+        double longitudeDifference = long2 - long1;
+        return Math.sqrt(
+                (latitudeDifference * latitudeDifference) + (longitudeDifference * longitudeDifference));
     }
 
     private static class Point {
@@ -340,6 +364,7 @@ public class BelgiumHubSuggester extends LoggingMain {
         public final Point point;
         public final AirLocation anchor;
         public PointPart previousPart;
+        public int count;
 
         public PointPart(Point point, AirLocation anchor) {
             this.point = point;
