@@ -87,7 +87,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, true, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, true, false);
         // Segmented road
-//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, true, true);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, true, true);
         generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, true, true);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, true, true);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, true, true);
@@ -115,7 +115,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
             writeHubCoordSection(vrpWriter, segmented, hubList);
             writeNodeCoordSection(vrpWriter, locationList);
             writeEdgeWeightSection(vrpWriter, road, segmented, hubList, locationList);
-            writeDemandSection(vrpWriter, locationListSize, vehicleListSize, capacity);
+            writeDemandSection(vrpWriter, locationListSize, vehicleListSize, capacity, locationList);
             writeDepotSection(vrpWriter);
         } catch (IOException e) {
             throw new IllegalArgumentException("Could not read the locationFile (" + locationFile.getName()
@@ -342,14 +342,20 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         return response;
     }
 
-    private void writeDemandSection(BufferedWriter vrpWriter, int locationListSize, int vehicleListSize, int capacity) throws IOException {
+    private void writeDemandSection(BufferedWriter vrpWriter, int locationListSize, int vehicleListSize, int capacity,
+            List<Location> locationList) throws IOException {
         vrpWriter.write("DEMAND_SECTION\n");
         // maximumDemand is 2 times the averageDemand. And the averageDemand is 2/3th of available capacity
         int maximumDemand = (4 * vehicleListSize * capacity) / (locationListSize * 3);
         Random random = new Random(37);
-        vrpWriter.write("1 0\n");
-        for (int i = 2; i <= locationListSize; i++) {
-            vrpWriter.write(i + " " + (random.nextInt(maximumDemand) + 1) + "\n");
+        boolean first = true;
+        for (Location location : locationList) {
+            if (first) {
+                vrpWriter.write(location.getId() + " 0\n");
+                first = false;
+            } else {
+                vrpWriter.write(location.getId() + " " + (random.nextInt(maximumDemand) + 1) + "\n");
+            }
         }
     }
 
