@@ -75,23 +75,23 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
 
     public void generate() {
 //        // Air
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, false, false);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, false, false);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, false, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, false, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, false, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, false, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, false, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, false, false);
 //        // Road
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, true, false);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, true, false);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, true, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, true, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, true, false);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, true, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, true, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, true, false);
         // Segmented road
         generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, true, true);
         generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, true, true);
         generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, true, true);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, true, true);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 2750, 55, 500, true, true);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, true, true);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 2750, 55, 500, true, true);
     }
 
     public void generateVrp(File locationFile, File hubFile, int locationListSize, int vehicleListSize, int capacity, boolean road, boolean segmented) {
@@ -216,8 +216,8 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                 }
             } else {
                 for (HubSegmentLocation fromHubLocation : hubList) {
-                    Map<HubSegmentLocation, Double> hubTravelDistanceMap = new LinkedHashMap<HubSegmentLocation, Double>(hubList.size());
-                    fromHubLocation.setHubTravelDistanceMap(hubTravelDistanceMap);
+                    Map<HubSegmentLocation, Double> fromHubTravelDistanceMap = new LinkedHashMap<HubSegmentLocation, Double>(hubList.size());
+                    fromHubLocation.setHubTravelDistanceMap(fromHubTravelDistanceMap);
                     for (HubSegmentLocation toHubLocation : hubList) {
                         if (fromHubLocation == toHubLocation) {
                             continue;
@@ -229,7 +229,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                             throw new IllegalArgumentException("The fromHubLocation (" + fromHubLocation
                                     + ") and toHubLocation (" + toHubLocation + ") are the same.");
                         }
-                        hubTravelDistanceMap.put(toHubLocation, distance);
+                        fromHubTravelDistanceMap.put(toHubLocation, distance);
                     }
                     logger.info("All hub distances calculated for hub ({}).", fromHubLocation);
                 }
@@ -280,14 +280,24 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                         if (firstHub == null && lastHub == null) {
                             fromNearbyTravelDistanceMap.put(toLocation, distance);
                         } else {
-                            GHResponse firstResponse = fetchGhResponse(fromLocation, toLocation);
+                            GHResponse firstResponse = fetchGhResponse(fromLocation, firstHub);
                             // Distance should be in km, not meter
                             double firstHubDistance = firstResponse.getDistance() / 1000.0;
                             fromHubTravelDistanceMap.put(firstHub, firstHubDistance);
-                            GHResponse lastResponse = fetchGhResponse(fromLocation, toLocation);
+                            GHResponse lastResponse = fetchGhResponse(lastHub, toLocation);
                             // Distance should be in km, not meter
                             double lastHubDistance = lastResponse.getDistance() / 1000.0;
                             lastHub.getNearbyTravelDistanceMap().put(toLocation, lastHubDistance);
+                            double segmentedDistance = fromLocation.getDistanceDouble(toLocation);
+                            double distanceDiff = distance - segmentedDistance;
+                            if (distanceDiff > 0.001) {
+                                logger.warn("The distance ({}) is bigger than the segmentedDistance ({}). "
+                                        + "It found a shortcut from {} to {}.",
+                                        distance, segmentedDistance, fromLocation, toLocation);
+                            } else if (distanceDiff < -0.001) {
+                                throw new IllegalArgumentException("The distance (" + distance
+                                        + ") is much smaller than the segmentedDistance (" + segmentedDistance + ").");
+                            }
                         }
                     }
                     logger.info("All distances calculated for location ({}).", fromLocation);
