@@ -87,8 +87,8 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, true, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, true, false);
         // Segmented road
-        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, true, true);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, true, true);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, true, true);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, true, true);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, true, true);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, true, true);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 2750, 55, 500, true, true);
@@ -192,9 +192,9 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
 
     private void writeEdgeWeightSection(BufferedWriter vrpWriter, boolean road, boolean segmented, List<HubSegmentLocation> hubList, List<Location> locationList) throws IOException {
         if (road) {
+            DecimalFormat distanceFormat = new DecimalFormat("0.000");
             if (!segmented) {
                 vrpWriter.write("EDGE_WEIGHT_SECTION\n");
-                DecimalFormat distanceFormat = new DecimalFormat("0.000");
                 for (Location fromAirLocation : locationList) {
                     for (Location toAirLocation : locationList) {
                         double distance;
@@ -215,7 +215,6 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                     logger.info("All distances calculated for location ({}).", fromAirLocation);
                 }
             } else {
-                vrpWriter.write("SEGMENTED_EDGE_WEIGHT_SECTION\n");
                 for (HubSegmentLocation fromHubLocation : hubList) {
                     Map<HubSegmentLocation, Double> hubTravelDistanceMap = new LinkedHashMap<HubSegmentLocation, Double>(hubList.size());
                     fromHubLocation.setHubTravelDistanceMap(hubTravelDistanceMap);
@@ -293,7 +292,28 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                     }
                     logger.info("All distances calculated for location ({}).", fromLocation);
                 }
-                // TODO
+                vrpWriter.write("SEGMENTED_EDGE_WEIGHT_SECTION\n");
+                for (HubSegmentLocation fromHub : hubList) {
+                    vrpWriter.write(fromHub.getId() + " ");
+                    for (Map.Entry<HubSegmentLocation, Double> entry : fromHub.getHubTravelDistanceMap().entrySet()) {
+                        vrpWriter.write(entry.getKey().getId() + " " + distanceFormat.format(entry.getValue()) + " ");
+                    }
+                    for (Map.Entry<RoadSegmentLocation, Double> entry : fromHub.getNearbyTravelDistanceMap().entrySet()) {
+                        vrpWriter.write(entry.getKey().getId() + " " + distanceFormat.format(entry.getValue()) + " ");
+                    }
+                    vrpWriter.write("\n");
+                }
+                for (Location fromLocationG : locationList) {
+                    RoadSegmentLocation fromLocation = (RoadSegmentLocation) fromLocationG;
+                    vrpWriter.write(fromLocation.getId() + " ");
+                    for (Map.Entry<HubSegmentLocation, Double> entry : fromLocation.getHubTravelDistanceMap().entrySet()) {
+                        vrpWriter.write(entry.getKey().getId() + " " + distanceFormat.format(entry.getValue()) + " ");
+                    }
+                    for (Map.Entry<RoadSegmentLocation, Double> entry : fromLocation.getNearbyTravelDistanceMap().entrySet()) {
+                        vrpWriter.write(entry.getKey().getId() + " " + distanceFormat.format(entry.getValue()) + " ");
+                    }
+                    vrpWriter.write("\n");
+                }
             }
         } else {
             for (Location fromAirLocation : locationList) {
