@@ -75,21 +75,21 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
 
     public void generate() {
 //        // Air
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, false, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, false, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, false, false);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, false, false);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, false, false);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, false, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, false, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, false, false);
 //        // Road
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, true, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, true, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, true, false);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, true, false);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, true, false);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, true, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, true, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, true, false);
         // Segmented road
         generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, true, true);
         generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, true, true);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, true, true);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, true, true);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, true, true);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 2750, 55, 500, true, true);
     }
@@ -116,7 +116,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
             writeNodeCoordSection(vrpWriter, locationList);
             writeEdgeWeightSection(vrpWriter, road, segmented, hubList, locationList);
             writeDemandSection(vrpWriter, locationListSize, vehicleListSize, capacity, locationList);
-            writeDepotSection(vrpWriter);
+            writeDepotSection(vrpWriter, locationList);
         } catch (IOException e) {
             throw new IllegalArgumentException("Could not read the locationFile (" + locationFile.getName()
                     + ") or write the vrpOutputFile (" + vrpOutputFile.getName() + ").", e);
@@ -359,9 +359,9 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         }
     }
 
-    private void writeDepotSection(BufferedWriter vrpWriter) throws IOException {
+    private void writeDepotSection(BufferedWriter vrpWriter, List<Location> locationList) throws IOException {
         vrpWriter.write("DEPOT_SECTION\n");
-        vrpWriter.write("1\n");
+        vrpWriter.write(locationList.get(0).getId() + "\n");
         vrpWriter.write("-1\n");
         vrpWriter.write("EOF\n");
     }
