@@ -74,31 +74,31 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
     }
 
     public void generate() {
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, GenerationDistanceType.AIR_DISTANCE);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, GenerationDistanceType.AIR_DISTANCE);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, GenerationDistanceType.AIR_DISTANCE);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, GenerationDistanceType.AIR_DISTANCE);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, GenerationDistanceType.AIR_DISTANCE);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, GenerationDistanceType.ROAD_DISTANCE_KM);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, GenerationDistanceType.ROAD_DISTANCE_KM);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, GenerationDistanceType.ROAD_DISTANCE_KM);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, GenerationDistanceType.ROAD_DISTANCE_KM);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, GenerationDistanceType.ROAD_DISTANCE_KM);
-        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
-        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
-        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
-        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
-        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 2750, 55, 500, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, GenerationDistanceType.AIR_DISTANCE);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, GenerationDistanceType.AIR_DISTANCE);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, GenerationDistanceType.AIR_DISTANCE);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, GenerationDistanceType.AIR_DISTANCE);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, GenerationDistanceType.AIR_DISTANCE);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, GenerationDistanceType.ROAD_DISTANCE_KM);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, GenerationDistanceType.ROAD_DISTANCE_KM);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, GenerationDistanceType.ROAD_DISTANCE_KM);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, GenerationDistanceType.ROAD_DISTANCE_KM);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, GenerationDistanceType.ROAD_DISTANCE_KM);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 2750, 55, 500, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
         generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, GenerationDistanceType.ROAD_DISTANCE_TIME);
         generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, GenerationDistanceType.ROAD_DISTANCE_TIME);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, GenerationDistanceType.ROAD_DISTANCE_TIME);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, GenerationDistanceType.ROAD_DISTANCE_TIME);
-        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, GenerationDistanceType.ROAD_DISTANCE_TIME);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, GenerationDistanceType.ROAD_DISTANCE_TIME);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, GenerationDistanceType.ROAD_DISTANCE_TIME);
         generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
         generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, GenerationDistanceType.ROAD_DISTANCE_TIME);
         generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
-        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
-        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 2750, 55, 500, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 2750, 55, 500, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
     }
 
     private static enum GenerationDistanceType {
