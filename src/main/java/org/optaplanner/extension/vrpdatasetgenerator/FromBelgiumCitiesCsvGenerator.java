@@ -257,6 +257,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                         new RoadSegmentLocation(location.getId(), location.getLatitude(), location.getLongitude())
                         : new RoadLocation(location.getId(), location.getLatitude(), location.getLongitude()))
                         : new AirLocation(location.getId(), location.getLatitude(), location.getLongitude());
+                newLocation.setName(location.getName());
                 newLocationList.add(newLocation);
             }
             selection = newSelection;
