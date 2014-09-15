@@ -74,47 +74,106 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
     }
 
     public void generate() {
-//        // Air
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, false, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, false, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, false, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, false, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, false, false);
-////        // Road
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, true, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, true, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, true, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, true, false);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, true, false);
-//        // Segmented road
-//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, true, true);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, true, true);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, true, true);
-//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, true, true);
-        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 2750, 55, 500, true, true);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, GenerationDistanceType.AIR_DISTANCE);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, GenerationDistanceType.AIR_DISTANCE);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, GenerationDistanceType.AIR_DISTANCE);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, GenerationDistanceType.AIR_DISTANCE);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, GenerationDistanceType.AIR_DISTANCE);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, GenerationDistanceType.ROAD_DISTANCE_KM);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, GenerationDistanceType.ROAD_DISTANCE_KM);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, GenerationDistanceType.ROAD_DISTANCE_KM);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, GenerationDistanceType.ROAD_DISTANCE_KM);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, GenerationDistanceType.ROAD_DISTANCE_KM);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 2750, 55, 500, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, GenerationDistanceType.ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, GenerationDistanceType.ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, GenerationDistanceType.ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, GenerationDistanceType.ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, GenerationDistanceType.ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 2750, 55, 500, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
     }
 
-    public void generateVrp(File locationFile, File hubFile, int locationListSize, int vehicleListSize, int capacity, boolean road, boolean segmented) {
+    private static enum GenerationDistanceType {
+        AIR_DISTANCE,
+        ROAD_DISTANCE_KM,
+        ROAD_DISTANCE_TIME,
+        SEGMENTED_ROAD_DISTANCE_KM,
+        SEGMENTED_ROAD_DISTANCE_TIME;
+
+        public String getFileSuffix() {
+            switch (this) {
+                case AIR_DISTANCE:
+                    return "";
+                case ROAD_DISTANCE_KM:
+                    return "-road-km";
+                case ROAD_DISTANCE_TIME:
+                    return "-road-time";
+                case SEGMENTED_ROAD_DISTANCE_KM:
+                    return "-segmentedRoad-km";
+                case SEGMENTED_ROAD_DISTANCE_TIME:
+                    return "-segmentedRoad-time";
+                default:
+                    throw new IllegalStateException("The generationDistanceType (" + this
+                            + ") is not implemented.");
+
+            }
+        }
+
+        public boolean isRoad() {
+            return this != AIR_DISTANCE;
+        }
+
+        public boolean isSegmented() {
+            return this == SEGMENTED_ROAD_DISTANCE_KM || this == SEGMENTED_ROAD_DISTANCE_TIME;
+        }
+
+        public double extractDistance(GHResponse response) {
+            switch (this) {
+                case AIR_DISTANCE:
+                    throw new IllegalStateException("The generationDistanceType (" + this
+                            + ") does not support GHResponse.");
+                case ROAD_DISTANCE_KM:
+                case SEGMENTED_ROAD_DISTANCE_KM:
+                    return response.getDistance() / 1000.0;
+                case ROAD_DISTANCE_TIME:
+                case SEGMENTED_ROAD_DISTANCE_TIME:
+                    return response.getMillis() / 1000.0;
+                default:
+                    throw new IllegalStateException("The generationDistanceType (" + this
+                            + ") is not implemented.");
+
+            }
+        }
+    }
+
+    public void generateVrp(File locationFile, File hubFile, int locationListSize, int vehicleListSize, int capacity, GenerationDistanceType distanceType) {
         // WARNING: this code is DIRTY.
         // It's JUST good enough to generate the Belgium datasets.
-        String suffix = road ? (segmented ? "-segmentedRoad" : "-road") : "";
         String name = locationFile.getName().replaceAll("\\-cities.csv", "")
-                + suffix + "-n" + locationListSize + "-k" + vehicleListSize;
+                + distanceType.getFileSuffix() + "-n" + locationListSize + "-k" + vehicleListSize;
         File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(), "import"
-                + (road ? "/roaddistance" : "")
+                + (distanceType.isRoad() ? "/roaddistance" : "")
                 + "/capacitated/" + name + ".vrp");
         if (!vrpOutputFile.getParentFile().exists()) {
             throw new IllegalArgumentException("The vrpOutputFile parent directory (" + vrpOutputFile.getParentFile()
                     + ") does not exist.");
         }
-        List<HubSegmentLocation> hubList = readHubList(hubFile, segmented);
-        List<Location> locationList = selectLocationSubList(locationFile, locationListSize, hubList.size(), road, segmented);
+        List<HubSegmentLocation> hubList = readHubList(hubFile, distanceType);
+        List<Location> locationList = selectLocationSubList(locationFile, locationListSize, hubList.size(), distanceType);
         BufferedWriter vrpWriter = null;
         try {
-            vrpWriter = writeHeaders(vrpWriter, locationListSize, capacity, road, segmented, name, vrpOutputFile);
-            writeHubCoordSection(vrpWriter, segmented, hubList);
+            vrpWriter = writeHeaders(vrpWriter, locationListSize, capacity, distanceType, name, vrpOutputFile);
+            writeHubCoordSection(vrpWriter, distanceType, hubList);
             writeNodeCoordSection(vrpWriter, locationList);
-            writeEdgeWeightSection(vrpWriter, road, segmented, hubList, locationList);
+            writeEdgeWeightSection(vrpWriter, distanceType, hubList, locationList);
             writeDemandSection(vrpWriter, locationListSize, vehicleListSize, capacity, locationList);
             writeDepotSection(vrpWriter, locationList);
         } catch (IOException e) {
@@ -126,14 +185,14 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         logger.info("Generated: {}", vrpOutputFile);
     }
 
-    private BufferedWriter writeHeaders(BufferedWriter vrpWriter, int locationListSize, int capacity, boolean road, boolean segmented, String name, File vrpOutputFile) throws IOException {
+    private BufferedWriter writeHeaders(BufferedWriter vrpWriter, int locationListSize, int capacity, GenerationDistanceType distanceType, String name, File vrpOutputFile) throws IOException {
         vrpWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(vrpOutputFile), "UTF-8"));
         vrpWriter.write("NAME: " + name + "\n");
         vrpWriter.write("COMMENT: Generated for OptaPlanner. Road distance calculated with GraphHopper.\n");
         vrpWriter.write("TYPE: CVRP\n");
         vrpWriter.write("DIMENSION: " + locationListSize + "\n");
-        if (road) {
-            if (segmented) {
+        if (distanceType.isRoad()) {
+            if (distanceType.isSegmented()) {
                 vrpWriter.write("EDGE_WEIGHT_TYPE: SEGMENTED_EXPLICIT\n");
                 vrpWriter.write("EDGE_WEIGHT_FORMAT: HUB_AND_NEARBY_MATRIX\n");
             } else {
@@ -147,8 +206,8 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         return vrpWriter;
     }
 
-    private void writeHubCoordSection(BufferedWriter vrpWriter, boolean segmented, List<HubSegmentLocation> hubList) throws IOException {
-        if (!segmented) {
+    private void writeHubCoordSection(BufferedWriter vrpWriter, GenerationDistanceType distanceType, List<HubSegmentLocation> hubList) throws IOException {
+        if (!distanceType.isSegmented()) {
             return;
         }
         vrpWriter.write("HUBS: " + hubList.size() + "\n");
@@ -159,7 +218,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         }
     }
 
-    private List<Location> selectLocationSubList(File locationFile, double locationListSize, long startId, boolean road, boolean segmented) {
+    private List<Location> selectLocationSubList(File locationFile, double locationListSize, long startId, GenerationDistanceType distanceType) {
         List<AirLocation> airLocationList = readAirLocationFile(locationFile, startId);
         if (locationListSize > airLocationList.size()) {
             throw new IllegalArgumentException("The locationListSize (" + locationListSize
@@ -171,7 +230,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         for (AirLocation location : airLocationList) {
             double newSelection = selection - selectionDecrement;
             if ((int) newSelection < (int) selection) {
-                Location newLocation = road ? (segmented ?
+                Location newLocation = distanceType.isRoad() ? (distanceType.isSegmented() ?
                         new RoadSegmentLocation(location.getId(), location.getLatitude(), location.getLongitude())
                         : new RoadLocation(location.getId(), location.getLatitude(), location.getLongitude()))
                         : new AirLocation(location.getId(), location.getLatitude(), location.getLongitude());
@@ -190,10 +249,10 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         }
     }
 
-    private void writeEdgeWeightSection(BufferedWriter vrpWriter, boolean road, boolean segmented, List<HubSegmentLocation> hubList, List<Location> locationList) throws IOException {
-        if (road) {
+    private void writeEdgeWeightSection(BufferedWriter vrpWriter, GenerationDistanceType distanceType, List<HubSegmentLocation> hubList, List<Location> locationList) throws IOException {
+        if (distanceType.isRoad()) {
             DecimalFormat distanceFormat = new DecimalFormat("0.000");
-            if (!segmented) {
+            if (!distanceType.isSegmented()) {
                 vrpWriter.write("EDGE_WEIGHT_SECTION\n");
                 for (Location fromAirLocation : locationList) {
                     for (Location toAirLocation : locationList) {
@@ -203,7 +262,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                         } else {
                             GHResponse response = fetchGhResponse(fromAirLocation, toAirLocation);
                             // Distance should be in km, not meter
-                            distance = response.getDistance() / 1000.0;
+                            distance = distanceType.extractDistance(response);
                             if (distance == 0.0) {
                                 throw new IllegalArgumentException("The fromAirLocation (" + fromAirLocation
                                         + ") and toAirLocation (" + toAirLocation + ") are the same.");
@@ -224,7 +283,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                         }
                         GHResponse response = fetchGhResponse(fromHubLocation, toHubLocation);
                         // Distance should be in km, not meter
-                        double distance = response.getDistance() / 1000.0;
+                        double distance = distanceType.extractDistance(response);
                         if (distance == 0.0) {
                             throw new IllegalArgumentException("The fromHubLocation (" + fromHubLocation
                                     + ") and toHubLocation (" + toHubLocation + ") are the same.");
@@ -251,7 +310,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                         }
                         GHResponse response = fetchGhResponse(fromLocation, toLocation);
                         // Distance should be in km, not meter
-                        double distance = response.getDistance() / 1000.0;
+                        double distance = distanceType.extractDistance(response);
                         if (distance == 0.0) {
                             throw new IllegalArgumentException("The fromLocation (" + fromLocation
                                     + ") and toLocation (" + toLocation + ") are the same.");
@@ -282,11 +341,11 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                         } else {
                             GHResponse firstResponse = fetchGhResponse(fromLocation, firstHub);
                             // Distance should be in km, not meter
-                            double firstHubDistance = firstResponse.getDistance() / 1000.0;
+                            double firstHubDistance = distanceType.extractDistance(firstResponse);
                             fromHubTravelDistanceMap.put(firstHub, firstHubDistance);
                             GHResponse lastResponse = fetchGhResponse(lastHub, toLocation);
                             // Distance should be in km, not meter
-                            double lastHubDistance = lastResponse.getDistance() / 1000.0;
+                            double lastHubDistance = distanceType.extractDistance(lastResponse);
                             lastHub.getNearbyTravelDistanceMap().put(toLocation, lastHubDistance);
                             double segmentedDistance = fromLocation.getDistanceDouble(toLocation);
                             double distanceDiff = distance - segmentedDistance;
@@ -376,8 +435,8 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         vrpWriter.write("EOF\n");
     }
 
-    private List<HubSegmentLocation> readHubList(File hubFile, boolean segmented) {
-        if (!segmented) {
+    private List<HubSegmentLocation> readHubList(File hubFile, GenerationDistanceType distanceType) {
+        if (!distanceType.isSegmented()) {
             return Collections.emptyList();
         }
         List<HubSegmentLocation> locationList = new ArrayList<HubSegmentLocation>(3000);
