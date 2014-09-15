@@ -80,17 +80,17 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, false, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, false, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, false, false);
-//        // Road
+////        // Road
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 50, 10, 125, true, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 100, 10, 250, true, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 500, 20, 250, true, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 1000, 20, 500, true, false);
 //        generateVrp(new File("data/raw/belgium-cities.csv"), null, 2750, 55, 500, true, false);
-        // Segmented road
-        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, true, true);
-        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, true, true);
-        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, true, true);
-        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, true, true);
+//        // Segmented road
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 50, 10, 125, true, true);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 100, 10, 250, true, true);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 500, 20, 250, true, true);
+//        generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 1000, 20, 500, true, true);
         generateVrp(new File("data/raw/belgium-cities.csv"), new File("data/raw/belgium-hubs.txt"), 2750, 55, 500, true, true);
     }
 
