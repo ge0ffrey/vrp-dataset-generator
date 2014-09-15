@@ -289,7 +289,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                             }
                             double segmentedDistance = fromLocation.getDistanceDouble(toLocation);
                             double distanceDiff = distance - segmentedDistance;
-                            if (distanceDiff > 0.001) {
+                            if (distanceDiff > 0.01) {
                                 logger.warn("The distance ({}) is bigger than the segmentedDistance ({}). "
                                         + "It found a shortcut from {} to {}.",
                                         distance, segmentedDistance, fromLocation, toLocation);
