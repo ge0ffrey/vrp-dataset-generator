@@ -146,6 +146,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                             + ") does not support GHResponse.");
                 case ROAD_DISTANCE_KM:
                 case SEGMENTED_ROAD_DISTANCE_KM:
+                    // Distance should be in km, not meter
                     return response.getDistance() / 1000.0;
                 case ROAD_DISTANCE_TIME:
                 case SEGMENTED_ROAD_DISTANCE_TIME:
@@ -285,7 +286,6 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                             distance = 0.0;
                         } else {
                             GHResponse response = fetchGhResponse(fromAirLocation, toAirLocation);
-                            // Distance should be in km, not meter
                             distance = distanceType.extractDistance(response);
                             if (distance == 0.0) {
                                 throw new IllegalArgumentException("The fromAirLocation (" + fromAirLocation
@@ -306,7 +306,6 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                             continue;
                         }
                         GHResponse response = fetchGhResponse(fromHubLocation, toHubLocation);
-                        // Distance should be in km, not meter
                         double distance = distanceType.extractDistance(response);
                         if (distance == 0.0) {
                             throw new IllegalArgumentException("The fromHubLocation (" + fromHubLocation
@@ -333,7 +332,6 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                             continue;
                         }
                         GHResponse response = fetchGhResponse(fromLocation, toLocation);
-                        // Distance should be in km, not meter
                         double distance = distanceType.extractDistance(response);
                         if (distance == 0.0) {
                             throw new IllegalArgumentException("The fromLocation (" + fromLocation
@@ -363,14 +361,16 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                         if (firstHub == null && lastHub == null) {
                             fromNearbyTravelDistanceMap.put(toLocation, distance);
                         } else {
-                            GHResponse firstResponse = fetchGhResponse(fromLocation, firstHub);
-                            // Distance should be in km, not meter
-                            double firstHubDistance = distanceType.extractDistance(firstResponse);
-                            fromHubTravelDistanceMap.put(firstHub, firstHubDistance);
-                            GHResponse lastResponse = fetchGhResponse(lastHub, toLocation);
-                            // Distance should be in km, not meter
-                            double lastHubDistance = distanceType.extractDistance(lastResponse);
-                            lastHub.getNearbyTravelDistanceMap().put(toLocation, lastHubDistance);
+                            if (!fromHubTravelDistanceMap.containsKey(firstHub)) {
+                                GHResponse firstResponse = fetchGhResponse(fromLocation, firstHub);
+                                double firstHubDistance = distanceType.extractDistance(firstResponse);
+                                fromHubTravelDistanceMap.put(firstHub, firstHubDistance);
+                            }
+                            if (!lastHub.getNearbyTravelDistanceMap().containsKey(toLocation)) {
+                                GHResponse lastResponse = fetchGhResponse(lastHub, toLocation);
+                                double lastHubDistance = distanceType.extractDistance(lastResponse);
+                                lastHub.getNearbyTravelDistanceMap().put(toLocation, lastHubDistance);
+                            }
                             double segmentedDistance = fromLocation.getDistanceDouble(toLocation);
                             double distanceDiff = distance - segmentedDistance;
                             if (distanceDiff > 0.001) {
