@@ -201,7 +201,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                         if (fromAirLocation == toAirLocation) {
                             distance = 0.0;
                         } else {
-                            GHResponse response = fetchGhResponse(fromAirLocation, toAirLocation);
+                            GHResponse response = fetchGhResponse(fromAirLocation, toAirLocation, distanceType);
                             distance = distanceType.extractDistance(response);
                             if (distance == 0.0) {
                                 throw new IllegalArgumentException("The fromAirLocation (" + fromAirLocation
@@ -221,7 +221,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                         if (fromHubLocation == toHubLocation) {
                             continue;
                         }
-                        GHResponse response = fetchGhResponse(fromHubLocation, toHubLocation);
+                        GHResponse response = fetchGhResponse(fromHubLocation, toHubLocation, distanceType);
                         double distance = distanceType.extractDistance(response);
                         if (distance == 0.0) {
                             throw new IllegalArgumentException("The fromHubLocation (" + fromHubLocation
@@ -247,7 +247,7 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                         if (fromLocation == toLocation) {
                             continue;
                         }
-                        GHResponse response = fetchGhResponse(fromLocation, toLocation);
+                        GHResponse response = fetchGhResponse(fromLocation, toLocation, distanceType);
                         double distance = distanceType.extractDistance(response);
                         if (distance == 0.0) {
                             throw new IllegalArgumentException("The fromLocation (" + fromLocation
@@ -278,12 +278,12 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
                             fromNearbyTravelDistanceMap.put(toLocation, distance);
                         } else {
                             if (!fromHubTravelDistanceMap.containsKey(firstHub)) {
-                                GHResponse firstResponse = fetchGhResponse(fromLocation, firstHub);
+                                GHResponse firstResponse = fetchGhResponse(fromLocation, firstHub, distanceType);
                                 double firstHubDistance = distanceType.extractDistance(firstResponse);
                                 fromHubTravelDistanceMap.put(firstHub, firstHubDistance);
                             }
                             if (!lastHub.getNearbyTravelDistanceMap().containsKey(toLocation)) {
-                                GHResponse lastResponse = fetchGhResponse(lastHub, toLocation);
+                                GHResponse lastResponse = fetchGhResponse(lastHub, toLocation, distanceType);
                                 double lastHubDistance = distanceType.extractDistance(lastResponse);
                                 lastHub.getNearbyTravelDistanceMap().put(toLocation, lastHubDistance);
                             }
@@ -337,10 +337,13 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
         }
     }
 
-    private GHResponse fetchGhResponse(Location fromLocation, Location toLocation) {
+    private GHResponse fetchGhResponse(Location fromLocation, Location toLocation, GenerationDistanceType distanceType) {
         GHRequest request = new GHRequest(fromLocation.getLatitude(), fromLocation.getLongitude(),
                 toLocation.getLatitude(), toLocation.getLongitude())
                 .setVehicle("car");
+        if (distanceType.isShortest()) {
+            request.setWeighting("shortest");
+        }
         GHResponse response = graphHopper.route(request);
         if (response.hasErrors()) {
             throw new IllegalStateException("GraphHopper gave " + response.getErrors().size()
@@ -514,6 +517,10 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
 
         public boolean isSegmented() {
             return this == SEGMENTED_ROAD_DISTANCE_KM || this == SEGMENTED_ROAD_DISTANCE_TIME;
+        }
+
+        public boolean isShortest() {
+            return this == AIR_DISTANCE || this == ROAD_DISTANCE_KM || this == SEGMENTED_ROAD_DISTANCE_KM;
         }
 
         public double extractDistance(GHResponse response) {
