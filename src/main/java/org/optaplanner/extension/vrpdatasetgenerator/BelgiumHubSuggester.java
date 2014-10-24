@@ -45,6 +45,10 @@ import org.optaplanner.core.api.score.constraint.primdouble.DoubleConstraintMatc
 import org.optaplanner.examples.common.app.LoggingMain;
 import org.optaplanner.examples.vehiclerouting.domain.location.AirLocation;
 
+/**
+ * This is very quick and VERY DIRTY code.
+ * Its results are also not that good.
+ */
 public class BelgiumHubSuggester extends LoggingMain {
 
     public static void main(String[] args) {

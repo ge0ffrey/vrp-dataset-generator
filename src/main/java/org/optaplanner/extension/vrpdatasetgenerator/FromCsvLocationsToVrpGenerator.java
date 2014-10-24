@@ -47,21 +47,43 @@ import org.optaplanner.examples.vehiclerouting.domain.location.segmented.HubSegm
 import org.optaplanner.examples.vehiclerouting.domain.location.segmented.RoadSegmentLocation;
 import org.optaplanner.examples.vehiclerouting.persistence.VehicleRoutingDao;
 
-public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
+/**
+ * This is very quick and VERY DIRTY code.
+ */
+public class FromCsvLocationsToVrpGenerator extends LoggingMain {
 
     public static void main(String[] args) {
-        new FromBelgiumCitiesCsvGenerator().generate();
+        DataSource dataSource = args.length == 0 ? DataSource.BELGIUM :  DataSource.valueOf(args[0]);
+        new FromCsvLocationsToVrpGenerator(dataSource).generate();
+    }
+
+    private static enum DataSource {
+        BELGIUM,
+        UK_TEAMS
     }
 
     protected final VehicleRoutingDao vehicleRoutingDao;
 
+    private final DataSource dataSource;
+
     private final GraphHopper graphHopper;
 
-    public FromBelgiumCitiesCsvGenerator() {
+    public FromCsvLocationsToVrpGenerator(DataSource dataSource) {
         vehicleRoutingDao = new VehicleRoutingDao();
+        this.dataSource = dataSource;
 
         graphHopper = new GraphHopper().forServer();
-        String osmPath = "local/osm/belgium-latest.osm.pbf";
+        String osmPath;
+        switch (dataSource) {
+            case BELGIUM:
+                osmPath = "local/osm/belgium-latest.osm.pbf";
+                break;
+            case UK_TEAMS:
+                osmPath = "local/osm/great-britain-latest.osm.pbf";
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported dataSource (" + dataSource + ").");
+        }
         if (!new File(osmPath).exists()) {
             throw new IllegalStateException("The osmPath (" + osmPath + ") does not exist.\n" +
                     "Download the osm file from http://download.geofabrik.de/ first.");
@@ -74,29 +96,42 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
     }
 
     public void generate() {
-        File locationFile = new File("data/raw/belgium-cities.csv");
-        File hubFile = new File("data/raw/belgium-hubs.txt");
-
-        generateVrp(locationFile, hubFile, 50, 10, 125);
-        generateVrp(locationFile, hubFile, 100, 10, 250);
-        generateVrp(locationFile, hubFile, 500, 20, 250);
-        generateVrp(locationFile, hubFile, 1000, 20, 500);
-        generateVrp(locationFile, hubFile, 2750, 55, 500);
+        switch (dataSource) {
+            case BELGIUM:
+                File locationFile = new File("data/raw/belgium-2750.csv");
+                File hubFile = new File("data/raw/belgium-hubs.txt");
+                generateVrp(locationFile, hubFile, 50, 10, 125);
+                generateVrp(locationFile, hubFile, 100, 10, 250);
+                generateVrp(locationFile, hubFile, 500, 20, 250);
+                generateVrp(locationFile, hubFile, 1000, 20, 500);
+                generateVrp(locationFile, hubFile, 2750, 55, 500);
+                break;
+            case UK_TEAMS:
+                generateVrp(new File("local/data/raw/uk-teams-42.csv"), null, 42, 10, 125);
+                generateVrp(new File("local/data/raw/uk-teams-92.csv"), null, 92, 10, 250);
+                generateVrp(new File("local/data/raw/uk-teams-160.csv"), null, 160, 12, 250);
+                generateVrp(new File("local/data/raw/uk-teams-202.csv"), null, 202, 14, 250);
+                hubFile = null;
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported dataSource (" + dataSource + ").");
+        }
     }
 
     public void generateVrp(File locationFile, File hubFile, int locationListSize, int vehicleListSize, int capacity) {
-
         generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.AIR_DISTANCE);
         generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_KM);
-        generateVrp(locationFile, hubFile, locationListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_KM);
         generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_TIME);
-        generateVrp(locationFile, hubFile, locationListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+        if (hubFile != null) {
+            generateVrp(locationFile, hubFile, locationListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_KM);
+            generateVrp(locationFile, hubFile, locationListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+        }
     }
 
     public void generateVrp(File locationFile, File hubFile, int locationListSize, int vehicleListSize, int capacity, GenerationDistanceType distanceType) {
         // WARNING: this code is DIRTY.
-        // It's JUST good enough to generate the Belgium datasets.
-        String name = locationFile.getName().replaceAll("\\-cities.csv", "")
+        // It's JUST good enough to generate the Belgium an UK datasets.
+        String name = locationFile.getName().replaceAll("\\-\\d+\\.csv", "")
                 + distanceType.getFileSuffix() + "-n" + locationListSize + "-k" + vehicleListSize;
         File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(), "import"
                 + (distanceType.isRoad() ? "/roaddistance" : "")
@@ -328,7 +363,9 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
             for (Location fromAirLocation : locationList) {
                 for (Location toAirLocation : locationList) {
                     if (fromAirLocation != toAirLocation && fromAirLocation.getDistance(toAirLocation) == 0) {
-                        throw new IllegalArgumentException("The fromAirLocation (" + fromAirLocation
+//                        throw new IllegalArgumentException("The fromAirLocation (" + fromAirLocation
+//                                + ") and toAirLocation (" + toAirLocation + ") are the same.");
+                        logger.warn("The fromAirLocation (" + fromAirLocation
                                 + ") and toAirLocation (" + toAirLocation + ") are the same.");
                     }
                 }
@@ -418,16 +455,32 @@ public class FromBelgiumCitiesCsvGenerator extends LoggingMain {
             bufferedReader = new BufferedReader(new InputStreamReader(new FileInputStream(locationFile), "UTF-8"));
             for (String line = bufferedReader.readLine(); line != null; line = bufferedReader.readLine()) {
                 String[] tokens = line.split(";");
-                if (tokens.length != 5) {
-                    throw new IllegalArgumentException("The line (" + line + ") does not have 5 tokens ("
-                            + tokens.length + ").");
-                }
                 AirLocation location = new AirLocation();
-                location.setId(id);
-                id++;
-                location.setLatitude(Double.parseDouble(tokens[2]));
-                location.setLongitude(Double.parseDouble(tokens[3]));
-                location.setName(tokens[4]);
+                switch (dataSource) {
+                    case BELGIUM:
+                        if (tokens.length != 5) {
+                            throw new IllegalArgumentException("The line (" + line + ") does not have 5 tokens ("
+                                    + tokens.length + ").");
+                        }
+                        location.setId(id);
+                        id++;
+                        location.setLatitude(Double.parseDouble(tokens[2]));
+                        location.setLongitude(Double.parseDouble(tokens[3]));
+                        location.setName(tokens[4]);
+                        break;
+                    case UK_TEAMS:
+                        if (tokens.length != 6) {
+                            throw new IllegalArgumentException("The line (" + line + ") does not have 6 tokens ("
+                                    + tokens.length + ").");
+                        }
+                        location.setId(Long.parseLong(tokens[5]));
+                        location.setLatitude(Double.parseDouble(tokens[3]));
+                        location.setLongitude(Double.parseDouble(tokens[4]));
+                        location.setName(tokens[1] +  " (" + tokens[0] + ")");
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Unsupported dataSource (" + dataSource + ").");
+                }
                 locationList.add(location);
             }
         } catch (IOException e) {
