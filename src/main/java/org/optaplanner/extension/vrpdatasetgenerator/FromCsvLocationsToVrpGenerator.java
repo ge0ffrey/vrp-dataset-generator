@@ -90,14 +90,14 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         }
         fastestGraphHopper = new GraphHopper().forServer();
         fastestGraphHopper.setOSMFile(osmPath);
-        fastestGraphHopper.setGraphHopperLocation("local/fastestGraphHopper");
+        fastestGraphHopper.setGraphHopperLocation("local/graphHopper/" + dataSource.name() + "/fastest");
         fastestGraphHopper.setEncodingManager(new EncodingManager(EncodingManager.CAR));
         fastestGraphHopper.setCHShortcuts("fastest");
         fastestGraphHopper.importOrLoad();
         logger.info("fastestGraphHopper loaded.");
         shortestGraphHopper = new GraphHopper().forServer();
         shortestGraphHopper.setOSMFile(osmPath);
-        shortestGraphHopper.setGraphHopperLocation("local/shortestGraphHopper");
+        shortestGraphHopper.setGraphHopperLocation("local/graphHopper/" + dataSource.name() + "/shortest");
         shortestGraphHopper.setEncodingManager(new EncodingManager(EncodingManager.CAR));
         shortestGraphHopper.setCHShortcuts("shortest");
         shortestGraphHopper.importOrLoad();
@@ -116,10 +116,10 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
                 generateVrp(locationFile, hubFile, 2750, 55, 500);
                 break;
             case UK_TEAMS:
-                generateVrp(new File("local/data/raw/uk-teams-42.csv"), null, 42, 10, 125);
+                generateVrp(new File("local/data/raw/uk-teams-41.csv"), null, 41, 10, 125);
                 generateVrp(new File("local/data/raw/uk-teams-92.csv"), null, 92, 10, 250);
                 generateVrp(new File("local/data/raw/uk-teams-160.csv"), null, 160, 12, 250);
-                generateVrp(new File("local/data/raw/uk-teams-202.csv"), null, 202, 14, 250);
+                generateVrp(new File("local/data/raw/uk-teams-201.csv"), null, 201, 14, 250);
                 hubFile = null;
                 break;
             default:
@@ -171,7 +171,11 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
     private BufferedWriter writeHeaders(BufferedWriter vrpWriter, int locationListSize, int capacity, GenerationDistanceType distanceType, String name, File vrpOutputFile) throws IOException {
         vrpWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(vrpOutputFile), "UTF-8"));
         vrpWriter.write("NAME: " + name + "\n");
-        vrpWriter.write("COMMENT: Generated for OptaPlanner. Road distance calculated with GraphHopper.\n");
+        if (dataSource == DataSource.UK_TEAMS) {
+            vrpWriter.write("COMMENT: Generated with GraphHopper by Graham Kendall, Geoffrey De Smet, Nasser Sabar and Angelina Yee.\n");
+        } else {
+            vrpWriter.write("COMMENT: Generated for OptaPlanner Examples with GraphHopper by Geoffrey De Smet.\n");
+        }
         vrpWriter.write("TYPE: CVRP\n");
         vrpWriter.write("DIMENSION: " + locationListSize + "\n");
         if (distanceType.isRoad()) {
