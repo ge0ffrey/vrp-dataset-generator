@@ -53,7 +53,7 @@ import org.optaplanner.examples.vehiclerouting.persistence.VehicleRoutingDao;
 public class FromCsvLocationsToVrpGenerator extends LoggingMain {
 
     public static void main(String[] args) {
-        DataSource dataSource = args.length == 0 ? DataSource.BELGIUM :  DataSource.valueOf(args[0]);
+        DataSource dataSource = args.length == 0 ? DataSource.BELGIUM : DataSource.valueOf(args[0]);
         new FromCsvLocationsToVrpGenerator(dataSource).generate();
     }
 
@@ -94,13 +94,14 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         fastestGraphHopper.setEncodingManager(new EncodingManager(EncodingManager.CAR));
         fastestGraphHopper.setCHShortcuts("fastest");
         fastestGraphHopper.importOrLoad();
+        logger.info("fastestGraphHopper loaded.");
         shortestGraphHopper = new GraphHopper().forServer();
         shortestGraphHopper.setOSMFile(osmPath);
         shortestGraphHopper.setGraphHopperLocation("local/shortestGraphHopper");
         shortestGraphHopper.setEncodingManager(new EncodingManager(EncodingManager.CAR));
         shortestGraphHopper.setCHShortcuts("shortest");
         shortestGraphHopper.importOrLoad();
-        logger.info("GraphHopper loaded.");
+        logger.info("shortestGraphHopper loaded.");
     }
 
     public void generate() {
