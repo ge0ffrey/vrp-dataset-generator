@@ -66,13 +66,13 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
 
     private final DataSource dataSource;
 
-    private final GraphHopper graphHopper;
+    private final GraphHopper fastestGraphHopper;
+    private final GraphHopper shortestGraphHopper;
 
     public FromCsvLocationsToVrpGenerator(DataSource dataSource) {
         vehicleRoutingDao = new VehicleRoutingDao();
         this.dataSource = dataSource;
 
-        graphHopper = new GraphHopper().forServer();
         String osmPath;
         switch (dataSource) {
             case BELGIUM:
@@ -88,10 +88,18 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
             throw new IllegalStateException("The osmPath (" + osmPath + ") does not exist.\n" +
                     "Download the osm file from http://download.geofabrik.de/ first.");
         }
-        graphHopper.setOSMFile(osmPath);
-        graphHopper.setGraphHopperLocation("local/graphhopper");
-        graphHopper.setEncodingManager(new EncodingManager(EncodingManager.CAR));
-        graphHopper.importOrLoad();
+        fastestGraphHopper = new GraphHopper().forServer();
+        fastestGraphHopper.setOSMFile(osmPath);
+        fastestGraphHopper.setGraphHopperLocation("local/fastestGraphHopper");
+        fastestGraphHopper.setEncodingManager(new EncodingManager(EncodingManager.CAR));
+        fastestGraphHopper.setCHShortcuts("fastest");
+        fastestGraphHopper.importOrLoad();
+        shortestGraphHopper = new GraphHopper().forServer();
+        shortestGraphHopper.setOSMFile(osmPath);
+        shortestGraphHopper.setGraphHopperLocation("local/shortestGraphHopper");
+        shortestGraphHopper.setEncodingManager(new EncodingManager(EncodingManager.CAR));
+        shortestGraphHopper.setCHShortcuts("shortest");
+        shortestGraphHopper.importOrLoad();
         logger.info("GraphHopper loaded.");
     }
 
@@ -378,9 +386,7 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         GHRequest request = new GHRequest(fromLocation.getLatitude(), fromLocation.getLongitude(),
                 toLocation.getLatitude(), toLocation.getLongitude())
                 .setVehicle("car");
-        if (distanceType.isShortest()) {
-            request.setWeighting("shortest");
-        }
+        GraphHopper graphHopper = distanceType.isShortest() ? shortestGraphHopper : fastestGraphHopper;
         GHResponse response = graphHopper.route(request);
         if (response.hasErrors()) {
             throw new IllegalStateException("GraphHopper gave " + response.getErrors().size()
