@@ -243,23 +243,23 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
             DecimalFormat distanceFormat = new DecimalFormat("0.000");
             if (!distanceType.isSegmented()) {
                 vrpWriter.write("EDGE_WEIGHT_SECTION\n");
-                for (Location fromAirLocation : locationList) {
-                    for (Location toAirLocation : locationList) {
+                for (Location fromLocation : locationList) {
+                    for (Location toLocation : locationList) {
                         double distance;
-                        if (fromAirLocation == toAirLocation) {
+                        if (fromLocation == toLocation) {
                             distance = 0.0;
                         } else {
-                            GHResponse response = fetchGhResponse(fromAirLocation, toAirLocation, distanceType);
+                            GHResponse response = fetchGhResponse(fromLocation, toLocation, distanceType);
                             distance = distanceType.extractDistance(response);
                             if (distance == 0.0) {
-                                throw new IllegalArgumentException("The fromAirLocation (" + fromAirLocation
-                                        + ") and toAirLocation (" + toAirLocation + ") are the same.");
+                                throw new IllegalArgumentException("The fromLocation (" + fromLocation
+                                        + ") and toLocation (" + toLocation + ") have a zero distance.");
                             }
                         }
                         vrpWriter.write(distanceFormat.format(distance) + " ");
                     }
                     vrpWriter.write("\n");
-                    logger.info("All distances calculated for location ({}).", fromAirLocation);
+                    logger.info("All distances calculated for location ({}).", fromLocation);
                 }
             } else {
                 for (HubSegmentLocation fromHubLocation : hubList) {
