@@ -153,7 +153,8 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         List<Location> locationList = selectLocationSubList(locationFile, locationListSize, hubList.size(), distanceType);
         BufferedWriter vrpWriter = null;
         try {
-            vrpWriter = writeHeaders(vrpWriter, locationListSize, capacity, distanceType, name, vrpOutputFile);
+            vrpWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(vrpOutputFile), "UTF-8"));
+            vrpWriter = writeHeaders(vrpWriter, locationListSize, capacity, distanceType, name);
             writeHubCoordSection(vrpWriter, distanceType, hubList);
             writeNodeCoordSection(vrpWriter, locationList);
             writeEdgeWeightSection(vrpWriter, distanceType, hubList, locationList);
@@ -168,8 +169,7 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         logger.info("Generated: {}", vrpOutputFile);
     }
 
-    private BufferedWriter writeHeaders(BufferedWriter vrpWriter, int locationListSize, int capacity, GenerationDistanceType distanceType, String name, File vrpOutputFile) throws IOException {
-        vrpWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(vrpOutputFile), "UTF-8"));
+    private BufferedWriter writeHeaders(BufferedWriter vrpWriter, int locationListSize, int capacity, GenerationDistanceType distanceType, String name) throws IOException {
         vrpWriter.write("NAME: " + name + "\n");
         if (dataSource == DataSource.UK_TEAMS) {
             vrpWriter.write("COMMENT: Generated with GraphHopper by Graham Kendall, Geoffrey De Smet, Nasser Sabar and Angelina Yee.\n");
