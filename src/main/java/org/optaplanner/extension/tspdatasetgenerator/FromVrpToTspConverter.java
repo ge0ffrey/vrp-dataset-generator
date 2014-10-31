@@ -45,7 +45,6 @@ public class FromVrpToTspConverter extends LoggingMain {
     }
 
     private void convertAllInDir(File inputDir, File outputDir) {
-        outputDir.mkdirs();
         File[] inputFiles = inputDir.listFiles(new FileFilter() {
             @Override
             public boolean accept(File file) {
