@@ -91,7 +91,7 @@ public class BelgiumHubSuggester extends LoggingMain {
         double maxAirDistance = 0.0;
         for (AirLocation fromAirLocation : locationList) {
             for (AirLocation toAirLocation : locationList) {
-                double airDistance = fromAirLocation.getAirDistanceDouble(toAirLocation);
+                double airDistance = fromAirLocation.getAirDistanceDoubleTo(toAirLocation);
                 if (airDistance > maxAirDistance) {
                     maxAirDistance = airDistance;
                 }

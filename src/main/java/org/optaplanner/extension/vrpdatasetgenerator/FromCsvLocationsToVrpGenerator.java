@@ -57,8 +57,9 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         new FromCsvLocationsToVrpGenerator(dataSource).generate();
     }
 
-    private static enum DataSource {
+    private enum DataSource {
         BELGIUM,
+        USA,
         UK_TEAMS
     }
 
@@ -78,11 +79,19 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
             case BELGIUM:
                 osmPath = "local/osm/belgium-latest.osm.pbf";
                 break;
+            case USA:
+                osmPath = null;
+                break;
             case UK_TEAMS:
                 osmPath = "local/osm/great-britain-latest.osm.pbf";
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported dataSource (" + dataSource + ").");
+        }
+        if (osmPath == null) {
+            fastestGraphHopper = null;
+            shortestGraphHopper = null;
+            return;
         }
         if (!new File(osmPath).exists()) {
             throw new IllegalStateException("The osmPath (" + osmPath + ") does not exist.\n" +
@@ -107,20 +116,27 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
     public void generate() {
         switch (dataSource) {
             case BELGIUM:
-                File locationFile = new File("data/raw/belgium-2750.csv");
-                File hubFile = new File("data/raw/belgium-hubs.txt");
-                generateVrp(locationFile, hubFile, 50, 10, 125);
-                generateVrp(locationFile, hubFile, 100, 10, 250);
-                generateVrp(locationFile, hubFile, 500, 20, 250);
-                generateVrp(locationFile, hubFile, 1000, 20, 500);
-                generateVrp(locationFile, hubFile, 2750, 55, 500);
+                File belgiumLocationFile = new File("data/raw/belgium-2750.csv");
+                File belgiumHubFile = new File("data/raw/belgium-hubs.txt");
+                generateVrp(belgiumLocationFile, belgiumHubFile, 50, 10, 125);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 100, 10, 250);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 500, 20, 250);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 1000, 20, 500);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 2750, 55, 500);
+                break;
+            case USA:
+                File usaLocationFile = new File("data/raw/usa-115475.csv");
+                generateVrp(usaLocationFile, null, 1000, 10, 1000);
+                generateVrp(usaLocationFile, null, 5000, 50, 1000);
+                generateVrp(usaLocationFile, null, 10000, 100, 1000);
+                generateVrp(usaLocationFile, null, 50000, 500, 1000);
+                generateVrp(usaLocationFile, null, 100000, 1000, 1000);
                 break;
             case UK_TEAMS:
                 generateVrp(new File("local/data/raw/uk-teams-41.csv"), null, 41, 10, 125);
                 generateVrp(new File("local/data/raw/uk-teams-92.csv"), null, 92, 10, 250);
                 generateVrp(new File("local/data/raw/uk-teams-160.csv"), null, 160, 12, 250);
                 generateVrp(new File("local/data/raw/uk-teams-201.csv"), null, 201, 14, 250);
-                hubFile = null;
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported dataSource (" + dataSource + ").");
@@ -129,8 +145,10 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
 
     public void generateVrp(File locationFile, File hubFile, int locationListSize, int vehicleListSize, int capacity) {
         generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.AIR_DISTANCE);
-        generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_KM);
-        generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_TIME);
+        if (dataSource != DataSource.USA) {
+            generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_KM);
+            generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_TIME);
+        }
         if (hubFile != null) {
             generateVrp(locationFile, hubFile, locationListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_KM);
             generateVrp(locationFile, hubFile, locationListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
@@ -375,7 +393,7 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         } else {
             for (Location fromAirLocation : locationList) {
                 for (Location toAirLocation : locationList) {
-                    if (fromAirLocation != toAirLocation && fromAirLocation.getDistance(toAirLocation) == 0) {
+                    if (fromAirLocation != toAirLocation && fromAirLocation.getDistanceTo(toAirLocation) == 0) {
 //                        throw new IllegalArgumentException("The fromAirLocation (" + fromAirLocation
 //                                + ") and toAirLocation (" + toAirLocation + ") are the same.");
                         logger.warn("The fromAirLocation (" + fromAirLocation
@@ -478,6 +496,17 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
                         location.setLatitude(Double.parseDouble(tokens[2]));
                         location.setLongitude(Double.parseDouble(tokens[3]));
                         location.setName(tokens[4]);
+                        break;
+                    case USA:
+                        if (tokens.length != 3) {
+                            throw new IllegalArgumentException("The line (" + line + ") does not have 3 tokens ("
+                                    + tokens.length + ").");
+                        }
+                        location.setId(id);
+                        id++;
+                        location.setLatitude(Double.parseDouble(tokens[1]));
+                        location.setLongitude(Double.parseDouble(tokens[2]));
+                        location.setName(tokens[0]);
                         break;
                     case UK_TEAMS:
                         if (tokens.length != 6) {
