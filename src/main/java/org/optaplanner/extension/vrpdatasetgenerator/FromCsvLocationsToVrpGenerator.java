@@ -190,9 +190,13 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
     private BufferedWriter writeHeaders(BufferedWriter vrpWriter, int locationListSize, int capacity, GenerationDistanceType distanceType, String name) throws IOException {
         vrpWriter.write("NAME: " + name + "\n");
         if (dataSource == DataSource.UK_TEAMS) {
-            vrpWriter.write("COMMENT: Generated with GraphHopper by Graham Kendall, Geoffrey De Smet, Nasser Sabar and Angelina Yee.\n");
+            vrpWriter.write("COMMENT: Generated"
+                    + (distanceType == GenerationDistanceType.AIR_DISTANCE ? "" : " with GraphHopper")
+                    + " by Graham Kendall, Geoffrey De Smet, Nasser Sabar and Angelina Yee.\n");
         } else {
-            vrpWriter.write("COMMENT: Generated for OptaPlanner Examples with GraphHopper by Geoffrey De Smet.\n");
+            vrpWriter.write("COMMENT: Generated for OptaPlanner Examples"
+                    + (distanceType == GenerationDistanceType.AIR_DISTANCE ? "" : " with GraphHopper")
+                    + " by Geoffrey De Smet.\n");
         }
         vrpWriter.write("TYPE: CVRP\n");
         vrpWriter.write("DIMENSION: " + locationListSize + "\n");

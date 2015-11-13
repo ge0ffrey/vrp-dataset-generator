@@ -136,7 +136,7 @@ public class FromVrpToTspConverter extends LoggingMain {
 
     private void convertLine(BufferedReader vrpReader, BufferedWriter tspWriter, String inputPattern, String outputLine) throws IOException {
         String line = vrpReader.readLine();
-        if (inputPattern != null && !line.matches(inputPattern)) {
+        if (inputPattern != null && !(line != null && line.matches(inputPattern))) {
             throw new IllegalStateException("The line (" + line + ") does not match inputPattern (" + inputPattern + ").");
         }
         tspWriter.write(outputLine + "\n");
@@ -144,7 +144,7 @@ public class FromVrpToTspConverter extends LoggingMain {
 
     private void copyLine(BufferedReader vrpReader, BufferedWriter tspWriter, String inputPattern) throws IOException {
         String line = vrpReader.readLine();
-        if (inputPattern != null && !line.matches(inputPattern)) {
+        if (inputPattern != null && !(line != null && line.matches(inputPattern))) {
             throw new IllegalStateException("The line (" + line + ") does not match inputPattern (" + inputPattern + ").");
         }
         tspWriter.write(line + "\n");
@@ -152,7 +152,7 @@ public class FromVrpToTspConverter extends LoggingMain {
 
     private void ignoreLine(BufferedReader vrpReader, BufferedWriter tspWriter, String inputPattern) throws IOException {
         String line = vrpReader.readLine();
-        if (inputPattern != null && !line.matches(inputPattern)) {
+        if (inputPattern != null && !(line != null && line.matches(inputPattern))) {
             throw new IllegalStateException("The line (" + line + ") does not match inputPattern (" + inputPattern + ").");
         }
     }

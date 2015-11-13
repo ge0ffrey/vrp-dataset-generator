@@ -1,5 +1,5 @@
 NAME: usa-n5000-k50
-COMMENT: Generated for OptaPlanner Examples with GraphHopper by Geoffrey De Smet.
+COMMENT: Generated for OptaPlanner Examples by Geoffrey De Smet.
 TYPE: CVRP
 DIMENSION: 5000
 EDGE_WEIGHT_TYPE: EUC_2D

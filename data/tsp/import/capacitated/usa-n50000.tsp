@@ -1,5 +1,5 @@
 NAME: usa-n50000
-COMMENT: Generated for OptaPlanner Examples with GraphHopper by Geoffrey De Smet.
+COMMENT: Generated for OptaPlanner Examples by Geoffrey De Smet.
 TYPE: TSP
 DIMENSION: 50000
 EDGE_WEIGHT_TYPE: EUC_2D
