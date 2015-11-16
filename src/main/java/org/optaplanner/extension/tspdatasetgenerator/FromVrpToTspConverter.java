@@ -40,8 +40,12 @@ public class FromVrpToTspConverter extends LoggingMain {
     }
 
     public void convertAll() {
-        convertAllInDir(new File("data/vehiclerouting/import/capacitated/"), new File("data/tsp/import/capacitated/"));
-        convertAllInDir(new File("data/vehiclerouting/import/roaddistance/capacitated/"), new File("data/tsp/import/roaddistance/capacitated/"));
+        convertAllInDir(new File("data/vehiclerouting/import/belgium/basic/air/"), new File("data/tsp/import/belgium/air/"));
+        convertAllInDir(new File("data/vehiclerouting/import/belgium/basic/road-km/"), new File("data/tsp/import/belgium/road-km/"));
+        convertAllInDir(new File("data/vehiclerouting/import/belgium/basic/road-time/"), new File("data/tsp/import/belgium/road-time/"));
+        convertAllInDir(new File("data/vehiclerouting/import/usa/basic/air/"), new File("data/tsp/import/usa/air/"));
+        convertAllInDir(new File("data/vehiclerouting/import/usa/basic/road-km/"), new File("data/tsp/import/usa/road-km/"));
+        convertAllInDir(new File("data/vehiclerouting/import/usa/basic/road-time/"), new File("data/tsp/import/usa/road-time/"));
     }
 
     private void convertAllInDir(File inputDir, File outputDir) {

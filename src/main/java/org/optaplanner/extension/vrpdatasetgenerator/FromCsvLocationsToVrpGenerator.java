@@ -160,9 +160,38 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         // It's JUST good enough to generate the Belgium an UK datasets.
         String name = locationFile.getName().replaceAll("\\-\\d+\\.csv", "")
                 + distanceType.getFileSuffix() + "-n" + locationListSize + "-k" + vehicleListSize;
-        File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(), "import"
-                + (distanceType.isRoad() ? "/roaddistance" : "")
-                + "/capacitated/" + name + ".vrp");
+        String dataSourceDir;
+        switch (dataSource) {
+            case BELGIUM:
+                dataSourceDir = "belgium";
+                break;
+            case USA:
+                dataSourceDir = "usa";
+                break;
+            case UK_TEAMS:
+                dataSourceDir = "uk-teams";
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported dataSource (" + dataSource + ").");
+        }
+        String distanceTypeDir;
+        switch (distanceType) {
+            case AIR_DISTANCE:
+                distanceTypeDir = "air";
+                break;
+            case ROAD_DISTANCE_KM:
+            case SEGMENTED_ROAD_DISTANCE_KM:
+                distanceTypeDir = "road-km";
+                break;
+            case ROAD_DISTANCE_TIME:
+            case SEGMENTED_ROAD_DISTANCE_TIME:
+                distanceTypeDir = "road-time";
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported dataSource (" + dataSource + ").");
+        }
+        File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(),
+                "import/" + dataSourceDir + "/basic/" + distanceTypeDir + "/" + name + ".vrp");
         if (!vrpOutputFile.getParentFile().exists()) {
             throw new IllegalArgumentException("The vrpOutputFile parent directory (" + vrpOutputFile.getParentFile()
                     + ") does not exist.");
@@ -582,7 +611,7 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
 
     }
 
-    private static enum GenerationDistanceType {
+    private enum GenerationDistanceType {
         AIR_DISTANCE,
         ROAD_DISTANCE_KM,
         ROAD_DISTANCE_TIME,
