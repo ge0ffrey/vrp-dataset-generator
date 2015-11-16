@@ -57,12 +57,6 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         new FromCsvLocationsToVrpGenerator(dataSource).generate();
     }
 
-    private enum DataSource {
-        BELGIUM,
-        USA,
-        UK_TEAMS
-    }
-
     protected final VehicleRoutingDao vehicleRoutingDao;
 
     private final DataSource dataSource;
@@ -74,20 +68,7 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         vehicleRoutingDao = new VehicleRoutingDao();
         this.dataSource = dataSource;
 
-        String osmPath;
-        switch (dataSource) {
-            case BELGIUM:
-                osmPath = "local/osm/belgium-latest.osm.pbf";
-                break;
-            case USA:
-                osmPath = null;
-                break;
-            case UK_TEAMS:
-                osmPath = "local/osm/great-britain-latest.osm.pbf";
-                break;
-            default:
-                throw new IllegalArgumentException("Unsupported dataSource (" + dataSource + ").");
-        }
+        String osmPath = dataSource.getOsmPath();
         if (osmPath == null) {
             fastestGraphHopper = null;
             shortestGraphHopper = null;
@@ -144,54 +125,30 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
     }
 
     public void generateVrp(File locationFile, File hubFile, int locationListSize, int vehicleListSize, int capacity) {
-        generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.AIR_DISTANCE);
+        generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.AIR_DISTANCE, VrpType.BASIC);
+        generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.AIR_DISTANCE, VrpType.TIMEWINDOWED);
         if (dataSource != DataSource.USA) {
-            generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_KM);
-            generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_TIME);
+            generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_KM, VrpType.BASIC);
+            // Road distance with timewindowed is pointless
+            generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_TIME, VrpType.BASIC);
+            generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_TIME, VrpType.TIMEWINDOWED);
         }
         if (hubFile != null) {
-            generateVrp(locationFile, hubFile, locationListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_KM);
-            generateVrp(locationFile, hubFile, locationListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME);
+            generateVrp(locationFile, hubFile, locationListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_KM, VrpType.BASIC);
+            generateVrp(locationFile, hubFile, locationListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME, VrpType.BASIC);
         }
     }
 
-    public void generateVrp(File locationFile, File hubFile, int locationListSize, int vehicleListSize, int capacity, GenerationDistanceType distanceType) {
+    public void generateVrp(File locationFile, File hubFile, int locationListSize, int vehicleListSize, int capacity,
+            GenerationDistanceType distanceType, VrpType vrpType) {
         // WARNING: this code is DIRTY.
         // It's JUST good enough to generate the Belgium an UK datasets.
         String name = locationFile.getName().replaceAll("\\-\\d+\\.csv", "")
                 + distanceType.getFileSuffix() + "-n" + locationListSize + "-k" + vehicleListSize;
-        String dataSourceDir;
-        switch (dataSource) {
-            case BELGIUM:
-                dataSourceDir = "belgium";
-                break;
-            case USA:
-                dataSourceDir = "usa";
-                break;
-            case UK_TEAMS:
-                dataSourceDir = "uk-teams";
-                break;
-            default:
-                throw new IllegalArgumentException("Unsupported dataSource (" + dataSource + ").");
-        }
-        String distanceTypeDir;
-        switch (distanceType) {
-            case AIR_DISTANCE:
-                distanceTypeDir = "air";
-                break;
-            case ROAD_DISTANCE_KM:
-            case SEGMENTED_ROAD_DISTANCE_KM:
-                distanceTypeDir = "road-km";
-                break;
-            case ROAD_DISTANCE_TIME:
-            case SEGMENTED_ROAD_DISTANCE_TIME:
-                distanceTypeDir = "road-time";
-                break;
-            default:
-                throw new IllegalArgumentException("Unsupported dataSource (" + dataSource + ").");
-        }
+        String dataSourceDir = dataSource.getDirName();
+        String distanceTypeDir = distanceType.getDirName();
         File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(),
-                "import/" + dataSourceDir + "/basic/" + distanceTypeDir + "/" + name + ".vrp");
+                "import/" + dataSourceDir + "/" + vrpType.getDirName() +"/" + distanceTypeDir + "/" + name + ".vrp");
         if (!vrpOutputFile.getParentFile().exists()) {
             throw new IllegalArgumentException("The vrpOutputFile parent directory (" + vrpOutputFile.getParentFile()
                     + ") does not exist.");
@@ -201,11 +158,11 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         BufferedWriter vrpWriter = null;
         try {
             vrpWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(vrpOutputFile), "UTF-8"));
-            vrpWriter = writeHeaders(vrpWriter, locationListSize, capacity, distanceType, name);
+            vrpWriter = writeHeaders(vrpWriter, locationListSize, capacity, distanceType, vrpType, name);
             writeHubCoordSection(vrpWriter, distanceType, hubList);
             writeNodeCoordSection(vrpWriter, locationList);
             writeEdgeWeightSection(vrpWriter, distanceType, hubList, locationList);
-            writeDemandSection(vrpWriter, locationListSize, vehicleListSize, capacity, locationList);
+            writeDemandSection(vrpWriter, locationListSize, vehicleListSize, capacity, locationList, vrpType);
             writeDepotSection(vrpWriter, locationList);
         } catch (IOException e) {
             throw new IllegalArgumentException("Could not read the locationFile (" + locationFile.getName()
@@ -216,7 +173,8 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         logger.info("Generated: {}", vrpOutputFile);
     }
 
-    private BufferedWriter writeHeaders(BufferedWriter vrpWriter, int locationListSize, int capacity, GenerationDistanceType distanceType, String name) throws IOException {
+    private BufferedWriter writeHeaders(BufferedWriter vrpWriter, int locationListSize, int capacity,
+            GenerationDistanceType distanceType, VrpType vrpType, String name) throws IOException {
         vrpWriter.write("NAME: " + name + "\n");
         if (dataSource == DataSource.UK_TEAMS) {
             vrpWriter.write("COMMENT: Generated"
@@ -227,7 +185,7 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
                     + (distanceType == GenerationDistanceType.AIR_DISTANCE ? "" : " with GraphHopper")
                     + " by Geoffrey De Smet.\n");
         }
-        vrpWriter.write("TYPE: CVRP\n");
+        vrpWriter.write("TYPE: " + vrpType.getHeaderType() +"\n");
         vrpWriter.write("DIMENSION: " + locationListSize + "\n");
         if (distanceType.isRoad()) {
             if (distanceType.isSegmented()) {
@@ -454,19 +412,36 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
     }
 
     private void writeDemandSection(BufferedWriter vrpWriter, int locationListSize, int vehicleListSize, int capacity,
-            List<Location> locationList) throws IOException {
+            List<Location> locationList, VrpType vrpType) throws IOException {
         vrpWriter.write("DEMAND_SECTION\n");
         // maximumDemand is 2 times the averageDemand. And the averageDemand is 2/3th of available capacity
         int maximumDemand = (4 * vehicleListSize * capacity) / (locationListSize * 3);
-        Random random = new Random(37);
+        int minReadyTime = 7 * 60 * 60; // 7:00
+        int maxWindowTimeInHalfHours = 12 * 2; // 12 hours
+        int maxDueTime = minReadyTime  + maxWindowTimeInHalfHours * 30 * 60; // 19:00
+        int customerServiceDuration = 5 * 60; // 5 minutes
         boolean first = true;
+        Random random = new Random(37);
         for (Location location : locationList) {
+            String line;
             if (first) {
-                vrpWriter.write(location.getId() + " 0\n");
+                line = location.getId() + " 0";
+                if (vrpType == VrpType.TIMEWINDOWED) {
+                    // Depot open from 7:00 until 19:00
+                    line += " " + minReadyTime + " " + maxDueTime + " 0";
+                }
                 first = false;
             } else {
-                vrpWriter.write(location.getId() + " " + (random.nextInt(maximumDemand) + 1) + "\n");
+                line = location.getId() + " " + (random.nextInt(maximumDemand) + 1);
+                if (vrpType == VrpType.TIMEWINDOWED) {
+                    int windowTimeInHalfHours = (4 * 2) + random.nextInt((4 * 2) + 1); // 4 to 8 hours
+                    int readyTime = minReadyTime + random.nextInt(maxWindowTimeInHalfHours - windowTimeInHalfHours + 1) * 30 * 60;
+                    int dueTime = readyTime + (windowTimeInHalfHours * 30 * 60);
+                    line += " " + readyTime + " " + dueTime + " " + customerServiceDuration;
+                }
             }
+            vrpWriter.write(line);
+            vrpWriter.write("\n");
         }
     }
 
@@ -609,82 +584,6 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
             return "" + latitude + "," + longitude;
         }
 
-    }
-
-    private enum GenerationDistanceType {
-        AIR_DISTANCE,
-        ROAD_DISTANCE_KM,
-        ROAD_DISTANCE_TIME,
-        SEGMENTED_ROAD_DISTANCE_KM,
-        SEGMENTED_ROAD_DISTANCE_TIME;
-
-        public String getFileSuffix() {
-            switch (this) {
-                case AIR_DISTANCE:
-                    return "";
-                case ROAD_DISTANCE_KM:
-                    return "-road-km";
-                case ROAD_DISTANCE_TIME:
-                    return "-road-time";
-                case SEGMENTED_ROAD_DISTANCE_KM:
-                    return "-segmentedRoad-km";
-                case SEGMENTED_ROAD_DISTANCE_TIME:
-                    return "-segmentedRoad-time";
-                default:
-                    throw new IllegalStateException("The generationDistanceType (" + this
-                            + ") is not implemented.");
-
-            }
-        }
-
-        public boolean isRoad() {
-            return this != AIR_DISTANCE;
-        }
-
-        public boolean isSegmented() {
-            return this == SEGMENTED_ROAD_DISTANCE_KM || this == SEGMENTED_ROAD_DISTANCE_TIME;
-        }
-
-        public boolean isShortest() {
-            return this == AIR_DISTANCE || this == ROAD_DISTANCE_KM || this == SEGMENTED_ROAD_DISTANCE_KM;
-        }
-
-        public double extractDistance(GHResponse response) {
-            switch (this) {
-                case AIR_DISTANCE:
-                    throw new IllegalStateException("The generationDistanceType (" + this
-                            + ") does not support GHResponse.");
-                case ROAD_DISTANCE_KM:
-                case SEGMENTED_ROAD_DISTANCE_KM:
-                    // Distance should be in km, not meter
-                    return response.getDistance() / 1000.0;
-                case ROAD_DISTANCE_TIME:
-                case SEGMENTED_ROAD_DISTANCE_TIME:
-                    return response.getMillis() / 1000.0;
-                default:
-                    throw new IllegalStateException("The generationDistanceType (" + this
-                            + ") is not implemented.");
-
-            }
-        }
-
-        public String getUnitOfMeasurement() {
-            switch (this) {
-                case AIR_DISTANCE:
-                    throw new IllegalStateException("The generationDistanceType (" + this
-                            + ") does unit of measurement.");
-                case ROAD_DISTANCE_KM:
-                case SEGMENTED_ROAD_DISTANCE_KM:
-                    return "km";
-                case ROAD_DISTANCE_TIME:
-                case SEGMENTED_ROAD_DISTANCE_TIME:
-                    return "sec";
-                default:
-                    throw new IllegalStateException("The generationDistanceType (" + this
-                            + ") is not implemented.");
-
-            }
-        }
     }
 
 }
