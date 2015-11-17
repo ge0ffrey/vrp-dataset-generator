@@ -144,11 +144,12 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         // WARNING: this code is DIRTY.
         // It's JUST good enough to generate the Belgium an UK datasets.
         String name = locationFile.getName().replaceAll("\\-\\d+\\.csv", "")
-                + distanceType.getFileSuffix() + "-n" + locationListSize + "-k" + vehicleListSize;
+                + distanceType.getFileSuffix() + vrpType.getFileSuffix() + "-n" + locationListSize + "-k" + vehicleListSize;
         String dataSourceDir = dataSource.getDirName();
-        String distanceTypeDir = distanceType.getDirName();
-        File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(),
-                "import/" + dataSourceDir + "/" + vrpType.getDirName() +"/" + distanceTypeDir + "/" + name + ".vrp");
+        File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(), "import/" + dataSourceDir
+                + "/" + vrpType.getDirName()
+                + "/" + distanceType.getDirName()
+                + "/" + name + ".vrp");
         if (!vrpOutputFile.getParentFile().exists()) {
             throw new IllegalArgumentException("The vrpOutputFile parent directory (" + vrpOutputFile.getParentFile()
                     + ") does not exist.");

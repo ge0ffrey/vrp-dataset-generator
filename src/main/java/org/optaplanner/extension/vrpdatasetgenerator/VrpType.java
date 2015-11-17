@@ -20,6 +20,17 @@ public enum VrpType {
     BASIC,
     TIMEWINDOWED;
 
+    public String getFileSuffix() {
+        switch (this) {
+            case BASIC:
+                return "";
+            case TIMEWINDOWED:
+                return "-tw";
+            default:
+                throw new IllegalArgumentException("Unsupported vrpType (" + this + ").");
+        }
+    }
+
     public String getDirName() {
         switch (this) {
             case BASIC:
@@ -41,4 +52,5 @@ public enum VrpType {
                 throw new IllegalArgumentException("Unsupported vrpType (" + this + ").");
         }
     }
+
 }
