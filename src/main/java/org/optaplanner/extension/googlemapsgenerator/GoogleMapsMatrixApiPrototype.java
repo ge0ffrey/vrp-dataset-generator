@@ -34,7 +34,7 @@ import com.google.maps.model.DistanceMatrixElementStatus;
 import com.google.maps.model.DistanceMatrixRow;
 import org.apache.commons.io.IOUtils;
 import org.optaplanner.core.api.domain.solution.Solution;
-import org.optaplanner.examples.tsp.domain.TravelingSalesmanTour;
+import org.optaplanner.examples.tsp.domain.TspSolution;
 import org.optaplanner.examples.tsp.domain.location.Location;
 import org.optaplanner.examples.tsp.persistence.TspImporter;
 
@@ -44,7 +44,7 @@ public class GoogleMapsMatrixApiPrototype {
         // TODO Use your own Google Maps API key credentials from https://console.developers.google.com
         // You'll need a Public API access server key
         GeoApiContext geoApiContext = new GeoApiContext().setApiKey("AIzaSyC8BwoiCD5yH0yzt7sgZ7UvWipSO8ddLpo");
-        TravelingSalesmanTour tour = (TravelingSalesmanTour) new TspImporter(true)
+        TspSolution tour = (TspSolution) new TspImporter(true)
                 .readSolution(new File("../optaplanner-examples/data/tsp/import/usa/americanRoadTrip-n50.tsp"));
         BufferedWriter distanceWriter = null;
         BufferedWriter timeWriter = null;
