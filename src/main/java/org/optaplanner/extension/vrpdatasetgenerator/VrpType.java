@@ -31,12 +31,12 @@ public enum VrpType {
         }
     }
 
-    public String getDirName() {
+    public String getDirName(boolean multidepot) {
         switch (this) {
             case BASIC:
-                return "basic";
+                return multidepot ? "multidepot" : "basic";
             case TIMEWINDOWED:
-                return "timewindowed";
+                return multidepot ? "multidepot-timewindowed" : "timewindowed";
             default:
                 throw new IllegalArgumentException("Unsupported vrpType (" + this + ").");
         }

@@ -99,63 +99,62 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
             case BELGIUM:
                 File belgiumLocationFile = new File("data/raw/belgium-2750.csv");
                 File belgiumHubFile = new File("data/raw/belgium-hubs.txt");
-                generateVrp(belgiumLocationFile, belgiumHubFile, 50, 10, 125);
-                generateVrp(belgiumLocationFile, belgiumHubFile, 100, 10, 250);
-                generateVrp(belgiumLocationFile, belgiumHubFile, 500, 20, 250);
-                generateVrp(belgiumLocationFile, belgiumHubFile, 1000, 20, 500);
-                generateVrp(belgiumLocationFile, belgiumHubFile, 2750, 55, 500);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 50, 1, 10, 125);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 50, 2, 10, 125);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 100, 1, 10, 250);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 100, 3, 10, 250);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 500, 1, 20, 250);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 500, 5, 20, 250);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 1000, 1, 20, 500);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 1000, 8, 20, 500);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 2750, 1, 55, 500);
+                generateVrp(belgiumLocationFile, belgiumHubFile, 2750, 10, 55, 500);
                 break;
             case USA:
                 File usaLocationFile = new File("data/raw/usa-115475.csv");
-                generateVrp(usaLocationFile, null, 1000, 10, 1000);
-                generateVrp(usaLocationFile, null, 5000, 50, 1000);
-                generateVrp(usaLocationFile, null, 10000, 100, 1000);
-                generateVrp(usaLocationFile, null, 50000, 500, 1000);
-                generateVrp(usaLocationFile, null, 100000, 1000, 1000);
+                generateVrp(usaLocationFile, null, 1000, 1, 10, 1000);
+                generateVrp(usaLocationFile, null, 5000, 1, 50, 1000);
+                generateVrp(usaLocationFile, null, 10000, 1, 100, 1000);
+                generateVrp(usaLocationFile, null, 50000, 1, 500, 1000);
+                generateVrp(usaLocationFile, null, 100000, 1, 1000, 1000);
                 break;
             case UK_TEAMS:
-                generateVrp(new File("local/data/raw/uk-teams-41.csv"), null, 41, 10, 125);
-                generateVrp(new File("local/data/raw/uk-teams-92.csv"), null, 92, 10, 250);
-                generateVrp(new File("local/data/raw/uk-teams-160.csv"), null, 160, 12, 250);
-                generateVrp(new File("local/data/raw/uk-teams-201.csv"), null, 201, 14, 250);
+                generateVrp(new File("local/data/raw/uk-teams-41.csv"), null, 41, 1, 10, 125);
+                generateVrp(new File("local/data/raw/uk-teams-92.csv"), null, 92, 1, 10, 250);
+                generateVrp(new File("local/data/raw/uk-teams-160.csv"), null, 160, 1, 12, 250);
+                generateVrp(new File("local/data/raw/uk-teams-201.csv"), null, 201, 1, 14, 250);
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported dataSource (" + dataSource + ").");
         }
     }
 
-    public void generateVrp(File locationFile, File hubFile, int locationListSize, int vehicleListSize, int capacity) {
-        generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.AIR_DISTANCE, VrpType.BASIC);
-        generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.AIR_DISTANCE, VrpType.TIMEWINDOWED);
+    public void generateVrp(File locationFile, File hubFile, int locationListSize, int depotListSize, int vehicleListSize, int capacity) {
+        generateVrp(locationFile, null, locationListSize, depotListSize, vehicleListSize, capacity, GenerationDistanceType.AIR_DISTANCE, VrpType.BASIC);
+        generateVrp(locationFile, null, locationListSize, depotListSize, vehicleListSize, capacity, GenerationDistanceType.AIR_DISTANCE, VrpType.TIMEWINDOWED);
         if (dataSource != DataSource.USA) {
-            generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_KM, VrpType.BASIC);
+            generateVrp(locationFile, null, locationListSize, depotListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_KM, VrpType.BASIC);
             // Road distance with timewindowed is pointless
-            generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_TIME, VrpType.BASIC);
-            generateVrp(locationFile, null, locationListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_TIME, VrpType.TIMEWINDOWED);
+            generateVrp(locationFile, null, locationListSize, depotListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_TIME, VrpType.BASIC);
+            generateVrp(locationFile, null, locationListSize, depotListSize, vehicleListSize, capacity, GenerationDistanceType.ROAD_DISTANCE_TIME, VrpType.TIMEWINDOWED);
         }
-        if (hubFile != null) {
-            generateVrp(locationFile, hubFile, locationListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_KM, VrpType.BASIC);
-            generateVrp(locationFile, hubFile, locationListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME, VrpType.BASIC);
+        if (hubFile != null && depotListSize == 1) {
+            generateVrp(locationFile, hubFile, locationListSize, depotListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_KM, VrpType.BASIC);
+            generateVrp(locationFile, hubFile, locationListSize, depotListSize, vehicleListSize, capacity, GenerationDistanceType.SEGMENTED_ROAD_DISTANCE_TIME, VrpType.BASIC);
         }
     }
 
-    public void generateVrp(File locationFile, File hubFile, int locationListSize, int vehicleListSize, int capacity,
+    public void generateVrp(File locationFile, File hubFile, int locationListSize, int depotListSize, int vehicleListSize, int capacity,
             GenerationDistanceType distanceType, VrpType vrpType) {
         // WARNING: this code is DIRTY.
         // It's JUST good enough to generate the Belgium an UK datasets.
         String name = locationFile.getName().replaceAll("\\-\\d+\\.csv", "")
-                + distanceType.getFileSuffix() + vrpType.getFileSuffix() + "-n" + locationListSize + "-k" + vehicleListSize;
-        String dataSourceDir = dataSource.getDirName();
-        File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(), "import/" + dataSourceDir
-                + "/" + vrpType.getDirName()
-                + "/" + distanceType.getDirName()
-                + "/" + name + ".vrp");
-        if (!vrpOutputFile.getParentFile().exists()) {
-            throw new IllegalArgumentException("The vrpOutputFile parent directory (" + vrpOutputFile.getParentFile()
-                    + ") does not exist.");
-        }
+                + distanceType.getFileSuffix() + vrpType.getFileSuffix()
+                + (depotListSize != 1 ? "-d" + depotListSize : "")
+                + "-n" + locationListSize + "-k" + vehicleListSize;
+        File vrpOutputFile = createVrpOutputFile(name, distanceType, vrpType, depotListSize != 1);
         List<HubSegmentLocation> hubList = readHubList(hubFile, distanceType);
-        List<Location> locationList = selectLocationSubList(locationFile, locationListSize, hubList.size(), distanceType);
+        List<Location> locationList = selectLocationSubList(locationFile, locationListSize, depotListSize, hubList.size(), distanceType);
         BufferedWriter vrpWriter = null;
         try {
             vrpWriter = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(vrpOutputFile), "UTF-8"));
@@ -163,8 +162,8 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
             writeHubCoordSection(vrpWriter, distanceType, hubList);
             writeNodeCoordSection(vrpWriter, locationList);
             writeEdgeWeightSection(vrpWriter, distanceType, hubList, locationList);
-            writeDemandSection(vrpWriter, locationListSize, vehicleListSize, capacity, locationList, vrpType);
-            writeDepotSection(vrpWriter, locationList);
+            writeDemandSection(vrpWriter, locationListSize, depotListSize, vehicleListSize, capacity, locationList, vrpType);
+            writeDepotSection(vrpWriter, locationList, depotListSize);
         } catch (IOException e) {
             throw new IllegalArgumentException("Could not read the locationFile (" + locationFile.getName()
                     + ") or write the vrpOutputFile (" + vrpOutputFile.getName() + ").", e);
@@ -172,6 +171,19 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
             IOUtils.closeQuietly(vrpWriter);
         }
         logger.info("Generated: {}", vrpOutputFile);
+    }
+
+    private File createVrpOutputFile(String name, GenerationDistanceType distanceType, VrpType vrpType, boolean multidepot) {
+        String dataSourceDir = dataSource.getDirName();
+        File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(), "import/" + dataSourceDir
+                + "/" + vrpType.getDirName(multidepot)
+                + "/" + distanceType.getDirName()
+                + "/" + name + ".vrp");
+        if (!vrpOutputFile.getParentFile().exists()) {
+            throw new IllegalArgumentException("The vrpOutputFile parent directory (" + vrpOutputFile.getParentFile()
+                    + ") does not exist.");
+        }
+        return vrpOutputFile;
     }
 
     private BufferedWriter writeHeaders(BufferedWriter vrpWriter, int locationListSize, int capacity,
@@ -216,28 +228,78 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         }
     }
 
-    private List<Location> selectLocationSubList(File locationFile, double locationListSize, long startId, GenerationDistanceType distanceType) {
+    private List<Location> selectLocationSubList(File locationFile, int locationListSize, int depotListSize, long startId, GenerationDistanceType distanceType) {
         List<AirLocation> airLocationList = readAirLocationFile(locationFile, startId);
         if (locationListSize > airLocationList.size()) {
             throw new IllegalArgumentException("The locationListSize (" + locationListSize
                     + ") is larger than the airLocationList size (" + airLocationList.size() + ").");
         }
-        double selectionDecrement = locationListSize / (double) airLocationList.size();
-        double selection = locationListSize;
-        List<Location> newLocationList = new ArrayList<Location>(airLocationList.size());
-        for (AirLocation location : airLocationList) {
+        List<Location> newLocationList = new ArrayList<Location>(locationListSize);
+        // Extract the depot's to the beginning of the list first
+        switch (depotListSize) {
+            case 1:
+                extractLocation(airLocationList, newLocationList, "BRUSSEL", distanceType);
+                break;
+            case 10:
+                extractLocation(airLocationList, newLocationList, "WAVRE", distanceType);
+            case 9:
+                extractLocation(airLocationList, newLocationList, "LEUVEN", distanceType);
+            case 8:
+                extractLocation(airLocationList, newLocationList, "MONS", distanceType);
+            case 7:
+                extractLocation(airLocationList, newLocationList, "ANTWERPEN", distanceType);
+            case 6:
+                extractLocation(airLocationList, newLocationList, "LIEGE", distanceType);
+            case 5:
+                extractLocation(airLocationList, newLocationList, "BRUGGE", distanceType);
+            case 4:
+                extractLocation(airLocationList, newLocationList, "ARLON", distanceType);
+            case 3:
+                extractLocation(airLocationList, newLocationList, "HASSELT", distanceType);
+            case 2:
+                extractLocation(airLocationList, newLocationList, "GENT", distanceType);
+                extractLocation(airLocationList, newLocationList, "NAMUR", distanceType);
+                break;
+            default:
+                throw new IllegalArgumentException("The depotListSize (" + depotListSize + ") is not supported");
+        }
+
+        int customerListSize = locationListSize - depotListSize;
+        double selection = customerListSize;
+        double selectionDecrement = (double) customerListSize / airLocationList.size();
+        if (depotListSize == 1) {
+            // HACK to avoid changing to single depot datasets generated 3 years ago
+            selectionDecrement = (double) locationListSize / (airLocationList.size() + depotListSize);
+            selection = locationListSize - selectionDecrement;
+        }
+        for (AirLocation airLocation : airLocationList) {
             double newSelection = selection - selectionDecrement;
+            // Only if the sum of the selectionDecrements flow over 1.0, select it
             if ((int) newSelection < (int) selection) {
-                Location newLocation = distanceType.isRoad() ? (distanceType.isSegmented() ?
-                        new RoadSegmentLocation(location.getId(), location.getLatitude(), location.getLongitude())
-                        : new RoadLocation(location.getId(), location.getLatitude(), location.getLongitude()))
-                        : new AirLocation(location.getId(), location.getLatitude(), location.getLongitude());
-                newLocation.setName(location.getName());
-                newLocationList.add(newLocation);
+                newLocationList.add(copyLocation(airLocation, distanceType));
             }
             selection = newSelection;
         }
+        if (newLocationList.size() != locationListSize) {
+            throw new IllegalStateException("The newLocationList size (" + newLocationList.size()
+                    + ") is not locationListSize (" + locationListSize + ").");
+        }
         return newLocationList;
+    }
+
+    private void extractLocation(List<AirLocation> airLocationList, List<Location> newLocationList, String name, GenerationDistanceType distanceType) {
+        AirLocation airLocation = airLocationList.stream().filter(location -> location.getName().equals(name)).findFirst().get();
+        airLocationList.remove(airLocation);
+        newLocationList.add(copyLocation(airLocation, distanceType));
+    }
+
+    private Location copyLocation(AirLocation location, GenerationDistanceType distanceType) {
+        Location newLocation = distanceType.isRoad() ? (distanceType.isSegmented() ?
+                new RoadSegmentLocation(location.getId(), location.getLatitude(), location.getLongitude())
+                : new RoadLocation(location.getId(), location.getLatitude(), location.getLongitude()))
+                : new AirLocation(location.getId(), location.getLatitude(), location.getLongitude());
+        newLocation.setName(location.getName());
+        return newLocation;
     }
 
     private void writeNodeCoordSection(BufferedWriter vrpWriter, List<Location> locationList) throws IOException {
@@ -412,26 +474,25 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         return response;
     }
 
-    private void writeDemandSection(BufferedWriter vrpWriter, int locationListSize, int vehicleListSize, int capacity,
+    private void writeDemandSection(BufferedWriter vrpWriter, int locationListSize, int depotListSize, int vehicleListSize, int capacity,
             List<Location> locationList, VrpType vrpType) throws IOException {
-        vrpWriter.write("DEMAND_SECTION\n");
+        vrpWriter.append("DEMAND_SECTION\n");
         // maximumDemand is 2 times the averageDemand. And the averageDemand is 2/3th of available capacity
         int maximumDemand = (4 * vehicleListSize * capacity) / (locationListSize * 3);
         int minReadyTime = 7 * 60 * 60; // 7:00
         int maxWindowTimeInHalfHours = 12 * 2; // 12 hours
         int maxDueTime = minReadyTime  + maxWindowTimeInHalfHours * 30 * 60; // 19:00
         int customerServiceDuration = 5 * 60; // 5 minutes
-        boolean first = true;
+        int i = 0;
         Random random = new Random(37);
         for (Location location : locationList) {
             String line;
-            if (first) {
+            if (i < depotListSize) {
                 line = location.getId() + " 0";
                 if (vrpType == VrpType.TIMEWINDOWED) {
                     // Depot open from 7:00 until 19:00
                     line += " " + minReadyTime + " " + maxDueTime + " 0";
                 }
-                first = false;
             } else {
                 line = location.getId() + " " + (random.nextInt(maximumDemand) + 1);
                 if (vrpType == VrpType.TIMEWINDOWED) {
@@ -441,16 +502,19 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
                     line += " " + readyTime + " " + dueTime + " " + customerServiceDuration;
                 }
             }
-            vrpWriter.write(line);
-            vrpWriter.write("\n");
+            vrpWriter.append(line).append("\n");
+            i++;
         }
     }
 
-    private void writeDepotSection(BufferedWriter vrpWriter, List<Location> locationList) throws IOException {
-        vrpWriter.write("DEPOT_SECTION\n");
-        vrpWriter.write(locationList.get(0).getId() + "\n");
-        vrpWriter.write("-1\n");
-        vrpWriter.write("EOF\n");
+    private void writeDepotSection(BufferedWriter vrpWriter, List<Location> locationList, int depotListSize) throws IOException {
+        vrpWriter.append("DEPOT_SECTION\n");
+        for (int i = 0; i < depotListSize; i++) {
+            Location location = locationList.get(i);
+            vrpWriter.append(Long.toString(location.getId())).append("\n");
+        }
+        vrpWriter.append("-1\n");
+        vrpWriter.append("EOF\n");
     }
 
     private List<HubSegmentLocation> readHubList(File hubFile, GenerationDistanceType distanceType) {

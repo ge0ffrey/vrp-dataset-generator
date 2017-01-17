@@ -33,7 +33,6 @@ import com.google.maps.model.DistanceMatrixElement;
 import com.google.maps.model.DistanceMatrixElementStatus;
 import com.google.maps.model.DistanceMatrixRow;
 import org.apache.commons.io.IOUtils;
-import org.optaplanner.core.api.domain.solution.Solution;
 import org.optaplanner.examples.tsp.domain.TspSolution;
 import org.optaplanner.examples.tsp.domain.location.Location;
 import org.optaplanner.examples.tsp.persistence.TspImporter;
