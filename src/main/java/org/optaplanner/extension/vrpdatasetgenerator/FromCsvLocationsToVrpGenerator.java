@@ -197,6 +197,7 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
             vrpWriter.write("COMMENT: Generated for OptaPlanner Examples"
                     + (distanceType == GenerationDistanceType.AIR_DISTANCE ? "" : " with GraphHopper")
                     + " by Geoffrey De Smet.\n");
+            vrpWriter.write("COMMENT: https://www.optaplanner.org/community/research.html\n");
         }
         vrpWriter.write("TYPE: " + vrpType.getHeaderType() +"\n");
         vrpWriter.write("DIMENSION: " + locationListSize + "\n");
