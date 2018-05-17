@@ -26,7 +26,7 @@ enum DataSource {
             case BELGIUM:
                 return "local/osm/belgium-latest.osm.pbf";
             case USA:
-                return null;
+                return "local/osm/north-america-latest.osm.pbf";
             case UK_TEAMS:
                 return"local/osm/great-britain-latest.osm.pbf";
             default:
