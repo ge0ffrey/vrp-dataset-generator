@@ -228,33 +228,37 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
                     + ") is larger than the airLocationList size (" + airLocationList.size() + ").");
         }
         List<Location> newLocationList = new ArrayList<Location>(locationListSize);
-        // Extract the depot's to the beginning of the list first
-        switch (depotListSize) {
-            case 1:
-                extractLocation(airLocationList, newLocationList, "BRUSSEL", distanceType);
-                break;
-            case 10:
-                extractLocation(airLocationList, newLocationList, "WAVRE", distanceType);
-            case 9:
-                extractLocation(airLocationList, newLocationList, "LEUVEN", distanceType);
-            case 8:
-                extractLocation(airLocationList, newLocationList, "MONS", distanceType);
-            case 7:
-                extractLocation(airLocationList, newLocationList, "ANTWERPEN", distanceType);
-            case 6:
-                extractLocation(airLocationList, newLocationList, "LIEGE", distanceType);
-            case 5:
-                extractLocation(airLocationList, newLocationList, "BRUGGE", distanceType);
-            case 4:
-                extractLocation(airLocationList, newLocationList, "ARLON", distanceType);
-            case 3:
-                extractLocation(airLocationList, newLocationList, "HASSELT", distanceType);
-            case 2:
-                extractLocation(airLocationList, newLocationList, "GENT", distanceType);
-                extractLocation(airLocationList, newLocationList, "NAMUR", distanceType);
-                break;
-            default:
-                throw new IllegalArgumentException("The depotListSize (" + depotListSize + ") is not supported");
+        if (locationFile.getName().contains("belgium")) {
+            // Extract the depot's to the beginning of the list first
+            switch (depotListSize) {
+                case 1:
+                    extractLocation(airLocationList, newLocationList, "BRUSSEL", distanceType);
+                    break;
+                case 10:
+                    extractLocation(airLocationList, newLocationList, "WAVRE", distanceType);
+                case 9:
+                    extractLocation(airLocationList, newLocationList, "LEUVEN", distanceType);
+                case 8:
+                    extractLocation(airLocationList, newLocationList, "MONS", distanceType);
+                case 7:
+                    extractLocation(airLocationList, newLocationList, "ANTWERPEN", distanceType);
+                case 6:
+                    extractLocation(airLocationList, newLocationList, "LIEGE", distanceType);
+                case 5:
+                    extractLocation(airLocationList, newLocationList, "BRUGGE", distanceType);
+                case 4:
+                    extractLocation(airLocationList, newLocationList, "ARLON", distanceType);
+                case 3:
+                    extractLocation(airLocationList, newLocationList, "HASSELT", distanceType);
+                case 2:
+                    extractLocation(airLocationList, newLocationList, "GENT", distanceType);
+                    extractLocation(airLocationList, newLocationList, "NAMUR", distanceType);
+                    break;
+                default:
+                    throw new IllegalArgumentException("The depotListSize (" + depotListSize + ") is not supported");
+            }
+        } else {
+            newLocationList.add(copyLocation(airLocationList.remove(0), distanceType));
         }
 
         int customerListSize = locationListSize - depotListSize;
