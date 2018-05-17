@@ -36,6 +36,8 @@ import java.util.Random;
 import com.graphhopper.GHRequest;
 import com.graphhopper.GHResponse;
 import com.graphhopper.GraphHopper;
+import com.graphhopper.PathWrapper;
+import com.graphhopper.reader.osm.GraphHopperOSM;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.util.PointList;
 import org.apache.commons.io.IOUtils;
@@ -61,8 +63,7 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
 
     private final DataSource dataSource;
 
-    private final GraphHopper fastestGraphHopper;
-    private final GraphHopper shortestGraphHopper;
+    private final GraphHopperOSM graphHopper;
 
     public FromCsvLocationsToVrpGenerator(DataSource dataSource) {
         vehicleRoutingDao = new VehicleRoutingDao();
@@ -70,28 +71,19 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
 
         String osmPath = dataSource.getOsmPath();
         if (osmPath == null) {
-            fastestGraphHopper = null;
-            shortestGraphHopper = null;
+            graphHopper = null;
             return;
         }
         if (!new File(osmPath).exists()) {
             throw new IllegalStateException("The osmPath (" + osmPath + ") does not exist.\n" +
                     "Download the osm file from http://download.geofabrik.de/ first.");
         }
-        fastestGraphHopper = new GraphHopper().forServer();
-        fastestGraphHopper.setOSMFile(osmPath);
-        fastestGraphHopper.setGraphHopperLocation("local/graphHopper/" + dataSource.name() + "/fastest");
-        fastestGraphHopper.setEncodingManager(new EncodingManager(EncodingManager.CAR));
-        fastestGraphHopper.setCHShortcuts("fastest");
-        fastestGraphHopper.importOrLoad();
-        logger.info("fastestGraphHopper loaded.");
-        shortestGraphHopper = new GraphHopper().forServer();
-        shortestGraphHopper.setOSMFile(osmPath);
-        shortestGraphHopper.setGraphHopperLocation("local/graphHopper/" + dataSource.name() + "/shortest");
-        shortestGraphHopper.setEncodingManager(new EncodingManager(EncodingManager.CAR));
-        shortestGraphHopper.setCHShortcuts("shortest");
-        shortestGraphHopper.importOrLoad();
-        logger.info("shortestGraphHopper loaded.");
+        graphHopper = (GraphHopperOSM) new GraphHopperOSM().forServer();
+        graphHopper.setOSMFile(osmPath);
+        graphHopper.setGraphHopperLocation("local/graphHopper/" + dataSource.name() + "/fastest");
+        graphHopper.setEncodingManager(new EncodingManager("car"));
+        graphHopper.importOrLoad();
+        logger.info("graphHopper loaded.");
     }
 
     public void generate() {
@@ -323,7 +315,7 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
                             distance = 0.0;
                         } else {
                             GHResponse response = fetchGhResponse(fromLocation, toLocation, distanceType);
-                            distance = distanceType.extractDistance(response);
+                            distance = distanceType.extractDistance(response.getBest());
                             if (distance == 0.0) {
                                 throw new IllegalArgumentException("The fromLocation (" + fromLocation
                                         + ") and toLocation (" + toLocation + ") have a zero distance.");
@@ -343,7 +335,7 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
                             continue;
                         }
                         GHResponse response = fetchGhResponse(fromHubLocation, toHubLocation, distanceType);
-                        double distance = distanceType.extractDistance(response);
+                        double distance = distanceType.extractDistance(response.getBest());
                         if (distance == 0.0) {
                             throw new IllegalArgumentException("The fromHubLocation (" + fromHubLocation
                                     + ") and toHubLocation (" + toHubLocation + ") are the same.");
@@ -369,12 +361,13 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
                             continue;
                         }
                         GHResponse response = fetchGhResponse(fromLocation, toLocation, distanceType);
-                        double distance = distanceType.extractDistance(response);
+                        PathWrapper path = response.getBest();
+                        double distance = distanceType.extractDistance(path);
                         if (distance == 0.0) {
                             throw new IllegalArgumentException("The fromLocation (" + fromLocation
                                     + ") and toLocation (" + toLocation + ") are the same.");
                         }
-                        PointList ghPointList = response.getPoints();
+                        PointList ghPointList = path.getPoints();
                         HubSegmentLocation firstHub = null;
                         for (int i = 0; i < ghPointList.size(); i++) {
                             double latitude = ghPointList.getLatitude(i);
@@ -400,12 +393,12 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
                         } else {
                             if (!fromHubTravelDistanceMap.containsKey(firstHub)) {
                                 GHResponse firstResponse = fetchGhResponse(fromLocation, firstHub, distanceType);
-                                double firstHubDistance = distanceType.extractDistance(firstResponse);
+                                double firstHubDistance = distanceType.extractDistance(firstResponse.getBest());
                                 fromHubTravelDistanceMap.put(firstHub, firstHubDistance);
                             }
                             if (!lastHub.getNearbyTravelDistanceMap().containsKey(toLocation)) {
                                 GHResponse lastResponse = fetchGhResponse(lastHub, toLocation, distanceType);
-                                double lastHubDistance = distanceType.extractDistance(lastResponse);
+                                double lastHubDistance = distanceType.extractDistance(lastResponse.getBest());
                                 lastHub.getNearbyTravelDistanceMap().put(toLocation, lastHubDistance);
                             }
                             double segmentedDistance = fromLocation.getDistanceDouble(toLocation);
@@ -463,8 +456,8 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
     private GHResponse fetchGhResponse(Location fromLocation, Location toLocation, GenerationDistanceType distanceType) {
         GHRequest request = new GHRequest(fromLocation.getLatitude(), fromLocation.getLongitude(),
                 toLocation.getLatitude(), toLocation.getLongitude())
+                .setWeighting(distanceType.isShortest() ? "shortest" : "fastest")
                 .setVehicle("car");
-        GraphHopper graphHopper = distanceType.isShortest() ? shortestGraphHopper : fastestGraphHopper;
         GHResponse response = graphHopper.route(request);
         if (response.hasErrors()) {
             throw new IllegalStateException("GraphHopper gave " + response.getErrors().size()

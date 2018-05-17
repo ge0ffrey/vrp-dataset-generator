@@ -38,10 +38,11 @@ import com.google.common.collect.Multisets;
 import com.graphhopper.GHRequest;
 import com.graphhopper.GHResponse;
 import com.graphhopper.GraphHopper;
+import com.graphhopper.PathWrapper;
+import com.graphhopper.reader.osm.GraphHopperOSM;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.util.PointList;
 import org.apache.commons.io.IOUtils;
-import org.optaplanner.core.api.score.constraint.primdouble.DoubleConstraintMatch;
 import org.optaplanner.examples.common.app.LoggingMain;
 import org.optaplanner.examples.vehiclerouting.domain.location.AirLocation;
 
@@ -55,10 +56,10 @@ public class BelgiumHubSuggester extends LoggingMain {
         new BelgiumHubSuggester().suggest();
     }
 
-    private final GraphHopper graphHopper;
+    private final GraphHopperOSM graphHopper;
 
     public BelgiumHubSuggester() {
-        graphHopper = new GraphHopper().forServer();
+        graphHopper = (GraphHopperOSM) new GraphHopperOSM().forServer();
         String osmPath = "local/osm/belgium-latest.osm.pbf";
         if (!new File(osmPath).exists()) {
             throw new IllegalStateException("The osmPath (" + osmPath + ") does not exist.\n" +
@@ -66,7 +67,7 @@ public class BelgiumHubSuggester extends LoggingMain {
         }
         graphHopper.setOSMFile(osmPath);
         graphHopper.setGraphHopperLocation("local/graphhopper");
-        graphHopper.setEncodingManager(new EncodingManager(EncodingManager.CAR));
+        graphHopper.setEncodingManager(new EncodingManager("car"));
         graphHopper.importOrLoad();
         logger.info("GraphHopper loaded.");
     }
@@ -113,12 +114,13 @@ public class BelgiumHubSuggester extends LoggingMain {
                         );
                     }
                     // Distance should be in km, not meter
-                    distance = response.getDistance() / 1000.0;
+                    PathWrapper path = response.getBest();
+                    distance = path.getDistance() / 1000.0;
                     if (distance == 0.0) {
                         throw new IllegalArgumentException("The fromAirLocation (" + fromAirLocation
                                 + ") and toAirLocation (" + toAirLocation + ") are the same.");
                     }
-                    PointList ghPointList = response.getPoints();
+                    PointList ghPointList = path.getPoints();
                     PointPart previousFromPointPart = null;
                     PointPart previousToPointPart = null;
                     double previousLatitude = Double.NaN;

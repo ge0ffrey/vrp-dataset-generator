@@ -17,6 +17,7 @@
 package org.optaplanner.extension.vrpdatasetgenerator;
 
 import com.graphhopper.GHResponse;
+import com.graphhopper.PathWrapper;
 
 public enum GenerationDistanceType {
     AIR_DISTANCE,
@@ -56,7 +57,7 @@ public enum GenerationDistanceType {
         return this == AIR_DISTANCE || this == ROAD_DISTANCE_KM || this == SEGMENTED_ROAD_DISTANCE_KM;
     }
 
-    public double extractDistance(GHResponse response) {
+    public double extractDistance(PathWrapper path) {
         switch (this) {
             case AIR_DISTANCE:
                 throw new IllegalStateException("The generationDistanceType (" + this
@@ -64,10 +65,10 @@ public enum GenerationDistanceType {
             case ROAD_DISTANCE_KM:
             case SEGMENTED_ROAD_DISTANCE_KM:
                 // Distance should be in km, not meter
-                return response.getDistance() / 1000.0;
+                return path.getDistance() / 1000.0;
             case ROAD_DISTANCE_TIME:
             case SEGMENTED_ROAD_DISTANCE_TIME:
-                return response.getMillis() / 1000.0;
+                return path.getTime() / 1000.0;
             default:
                 throw new IllegalStateException("The generationDistanceType (" + this
                         + ") is not implemented.");
