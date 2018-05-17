@@ -43,7 +43,7 @@ public class GoogleMapsMatrixApiPrototype {
         // TODO Use your own Google Maps API key credentials from https://console.developers.google.com
         // You'll need a Public API access server key
         GeoApiContext geoApiContext = new GeoApiContext().setApiKey("AIzaSyC8BwoiCD5yH0yzt7sgZ7UvWipSO8ddLpo");
-        TspSolution tour = (TspSolution) new TspImporter(true)
+        TspSolution tour = (TspSolution) new TspImporter()
                 .readSolution(new File("../optaplanner-examples/data/tsp/import/usa/americanRoadTrip-n50.tsp"));
         BufferedWriter distanceWriter = null;
         BufferedWriter timeWriter = null;

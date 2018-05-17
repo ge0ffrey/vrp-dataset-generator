@@ -35,7 +35,6 @@ import java.util.Random;
 
 import com.graphhopper.GHRequest;
 import com.graphhopper.GHResponse;
-import com.graphhopper.GraphHopper;
 import com.graphhopper.PathWrapper;
 import com.graphhopper.reader.osm.GraphHopperOSM;
 import com.graphhopper.routing.util.EncodingManager;
@@ -47,7 +46,7 @@ import org.optaplanner.examples.vehiclerouting.domain.location.Location;
 import org.optaplanner.examples.vehiclerouting.domain.location.RoadLocation;
 import org.optaplanner.examples.vehiclerouting.domain.location.segmented.HubSegmentLocation;
 import org.optaplanner.examples.vehiclerouting.domain.location.segmented.RoadSegmentLocation;
-import org.optaplanner.examples.vehiclerouting.persistence.VehicleRoutingDao;
+import org.optaplanner.examples.vehiclerouting.persistence.VehicleRoutingFileIO;
 
 /**
  * This is very quick and VERY DIRTY code.
@@ -59,14 +58,14 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         new FromCsvLocationsToVrpGenerator(dataSource).generate();
     }
 
-    protected final VehicleRoutingDao vehicleRoutingDao;
+    protected final VehicleRoutingFileIO vehicleRoutingFileIO;
 
     private final DataSource dataSource;
 
     private final GraphHopperOSM graphHopper;
 
     public FromCsvLocationsToVrpGenerator(DataSource dataSource) {
-        vehicleRoutingDao = new VehicleRoutingDao();
+        vehicleRoutingFileIO = new VehicleRoutingFileIO();
         this.dataSource = dataSource;
 
         String osmPath = dataSource.getOsmPath();
@@ -80,8 +79,9 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
         }
         graphHopper = (GraphHopperOSM) new GraphHopperOSM().forServer();
         graphHopper.setOSMFile(osmPath);
-        graphHopper.setGraphHopperLocation("local/graphHopper/" + dataSource.name() + "/fastest");
+        graphHopper.setGraphHopperLocation("local/graphHopper/" + dataSource.name());
         graphHopper.setEncodingManager(new EncodingManager("car"));
+        logger.info("graphHopper loading...");
         graphHopper.importOrLoad();
         logger.info("graphHopper loaded.");
     }
@@ -167,7 +167,7 @@ public class FromCsvLocationsToVrpGenerator extends LoggingMain {
 
     private File createVrpOutputFile(String name, GenerationDistanceType distanceType, VrpType vrpType, boolean multidepot) {
         String dataSourceDir = dataSource.getDirName();
-        File vrpOutputFile = new File(vehicleRoutingDao.getDataDir(), "import/" + dataSourceDir
+        File vrpOutputFile = new File("data/vehiclerouting/import/" + dataSourceDir
                 + "/" + vrpType.getDirName(multidepot)
                 + "/" + distanceType.getDirName()
                 + "/" + name + ".vrp");
