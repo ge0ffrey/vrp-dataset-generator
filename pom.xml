@@ -75,7 +75,7 @@
         <!-- Needed for graphhopper-reader-osm to overwrite the version of kie-parent -->
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
-        <version>3.4.0</version>
+        <version>3.16.1</version>
         <scope>compile</scope>
       </dependency>
     </dependencies>
